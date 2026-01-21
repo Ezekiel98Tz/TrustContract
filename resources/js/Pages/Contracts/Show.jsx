@@ -188,48 +188,6 @@ export default function Show({ auth, contract, canSign, canReview, downloadable,
                                         </div>
                                     </div>
                                 </div>
-
-                    {canReview && (
-                        <div className="bg-brand-black overflow-hidden shadow-lg sm:rounded-lg border border-gray-800 mt-6">
-                            <div className="p-6 text-gray-200">
-                                <h3 className="text-lg font-bold text-brand-gold uppercase tracking-wide">Leave a Review</h3>
-                                <form
-                                    onSubmit={(e) => {
-                                        e.preventDefault();
-                                        post(route('contracts.reviews.store', contract.id));
-                                    }}
-                                    className="mt-4 space-y-4"
-                                >
-                                    <div>
-                                        <label className="text-sm text-gray-300">Rating (1-5)</label>
-                                        <div className="mt-2">
-                                            <StarRating
-                                                value={data.rating}
-                                                onChange={(v) => setData('rating', v)}
-                                                size={28}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm text-gray-300">Comment</label>
-                                        <textarea
-                                            value={data.comment}
-                                            onChange={(e) => setData('comment', e.target.value)}
-                                            className="mt-1 block w-full rounded-md bg-gray-900 border-gray-800 text-gray-200"
-                                            rows={3}
-                                        />
-                                    </div>
-                                    <button
-                                        type="submit"
-                                        disabled={processing}
-                                        className="inline-flex items-center px-6 py-3 bg-brand-gold border border-transparent rounded-md font-bold text-sm text-brand-black uppercase tracking-widest hover:bg-yellow-500"
-                                    >
-                                        Submit Review
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    )}
                                 <div>
                                     <h3 className="text-lg font-bold text-brand-gold mb-4 uppercase tracking-wide">Terms</h3>
                                     <div className="prose max-w-none text-gray-300 bg-gray-900 p-6 rounded-lg border border-gray-700 min-h-[200px]">
@@ -243,6 +201,48 @@ export default function Show({ auth, contract, canSign, canReview, downloadable,
                                     )}
                                 </div>
                             </div>
+
+                            {canReview && (
+                                <div className="bg-brand-black overflow-hidden shadow-lg sm:rounded-lg border border-gray-800 mb-8">
+                                    <div className="p-6 text-gray-200">
+                                        <h3 className="text-lg font-bold text-brand-gold uppercase tracking-wide">Leave a Review</h3>
+                                        <form
+                                            onSubmit={(e) => {
+                                                e.preventDefault();
+                                                post(route('contracts.reviews.store', contract.id));
+                                            }}
+                                            className="mt-4 space-y-4"
+                                        >
+                                            <div>
+                                                <label className="text-sm text-gray-300">Rating (1-5)</label>
+                                                <div className="mt-2">
+                                                    <StarRating
+                                                        value={data.rating}
+                                                        onChange={(v) => setData('rating', v)}
+                                                        size={28}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm text-gray-300">Comment</label>
+                                                <textarea
+                                                    value={data.comment}
+                                                    onChange={(e) => setData('comment', e.target.value)}
+                                                    className="mt-1 block w-full rounded-md bg-gray-900 border-gray-800 text-gray-200"
+                                                    rows={3}
+                                                />
+                                            </div>
+                                            <button
+                                                type="submit"
+                                                disabled={processing}
+                                                className="inline-flex items-center px-6 py-3 bg-brand-gold border border-transparent rounded-md font-bold text-sm text-brand-black uppercase tracking-widest hover:bg-yellow-500"
+                                            >
+                                                Submit Review
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Reviews */}
                             {contract.reviews && contract.reviews.length > 0 && (
@@ -442,8 +442,9 @@ export default function Show({ auth, contract, canSign, canReview, downloadable,
                                 {/* Download and Delete */}
                                 {downloadable && (
                                     <Link
-                                        href={route('contracts.pdf', contract.id)}
-                                        className="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-brand-gold uppercase tracking-widest hover:bg-gray-700 focus:outline-none transition ease-in-out duration-150"
+                                        href={`${route('contracts.print', contract.id)}?download=1`}
+                                        target="_blank"
+                                        className="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-gray-200 uppercase tracking-widest hover:bg-gray-700 focus:outline-none transition ease-in-out duration-150"
                                     >
                                         Download PDF
                                     </Link>

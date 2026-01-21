@@ -387,9 +387,9 @@ class ContractController extends Controller
             // ... (Notification logic can go here)
 
             DB::commit();
-
+            
             if ($contract->status === 'signed') {
-                return back()->with('success', 'You signed successfully! Both parties have now signed the contract.');
+                return redirect()->route('contracts.print', $contract->id)->with('success', 'Both parties have signed. You can print or save the agreement now.');
             } else {
                 return back()->with('success', 'Signed successfully! Now waiting for the other party to sign.');
             }
@@ -470,6 +470,8 @@ class ContractController extends Controller
         return \Illuminate\Support\Facades\Storage::download($path);
     }
 
+    // Removed previewPdf: we now rely on Printable Version for white paper styling and direct download from there.
+
     public function print(Contract $contract)
     {
         $user = Auth::user();
@@ -502,6 +504,8 @@ class ContractController extends Controller
                     return [
                         'user' => $s->user ? $s->user->name : ('User #'.$s->user_id),
                         'signed_at' => $s->signed_at,
+                        'ip_address' => $s->ip_address,
+                        'device_info' => $s->device_info,
                     ];
                 })->values(),
             ],

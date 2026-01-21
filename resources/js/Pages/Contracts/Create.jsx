@@ -5,6 +5,7 @@ import StarRating from '@/components/StarRating';
 import InputError from '@/components/InputError';
 import InputLabel from '@/components/InputLabel';
 import TextInput from '@/components/TextInput';
+import { composeTemplate } from '@/utils/contractTemplates';
 
 export default function Create({ auth }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -190,6 +191,37 @@ export default function Create({ auth }) {
                                         required
                                     />
                                     <InputError message={errors.title} className="mt-2" />
+                                </div>
+                                )}
+                                {step === 2 && (
+                                <div className="mt-4">
+                                    <InputLabel htmlFor="template" value="Quick Template" className="text-gray-300" />
+                                    <select
+                                        id="template"
+                                        className="mt-1 block w-full border-gray-700 bg-gray-900 text-white rounded-md"
+                                        onChange={(e) => {
+                                            const key = e.target.value;
+                                            if (!key) return;
+                                            const ctx = {
+                                                title: data.title,
+                                                buyerName: auth.user.role === 'Buyer' ? auth.user.name : 'Buyer',
+                                                sellerName: auth.user.role === 'Seller' ? auth.user.name : 'Seller',
+                                                amount: (Number(data.price_cents || 0) / 100).toLocaleString('en-US', { style: 'currency', currency: data.currency || 'USD' }),
+                                                currency: data.currency || 'USD',
+                                                deadline: data.deadline_at || '',
+                                            };
+                                            const text = composeTemplate(key, ctx);
+                                            setData('description', text);
+                                        }}
+                                    >
+                                        <option value="">Select a template…</option>
+                                        <option value="goods_sale">Goods Sale</option>
+                                        <option value="service_agreement">Service Agreement</option>
+                                        <option value="freelance_project">Freelance Project</option>
+                                        <option value="formal_goods_sale">Formal Goods Sale</option>
+                                        <option value="formal_service_agreement">Formal Service Agreement</option>
+                                        <option value="formal_freelance_project">Formal Freelance Project</option>
+                                    </select>
                                 </div>
                                 )}
                                 {step === 2 && (
