@@ -1,7 +1,7 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
+import InputError from '@/components/InputError';
+import InputLabel from '@/components/InputLabel';
+import PrimaryButton from '@/components/PrimaryButton';
+import TextInput from '@/components/TextInput';
 import { Transition } from '@headlessui/react';
 import { Link, useForm, usePage } from '@inertiajs/react';
 
@@ -14,8 +14,16 @@ export default function UpdateProfileInformation({
 
     const { data, setData, patch, errors, processing, recentlySuccessful } =
         useForm({
-            name: user.name,
-            email: user.email,
+            name: user.name ?? '',
+            email: user.email ?? '',
+            phone: user.phone ?? '',
+            country: user.country ?? '',
+            address_line1: user.address_line1 ?? '',
+            address_line2: user.address_line2 ?? '',
+            city: user.city ?? '',
+            state: user.state ?? '',
+            postal_code: user.postal_code ?? '',
+            date_of_birth: user.date_of_birth ?? '',
         });
 
     const submit = (e) => {
@@ -37,7 +45,8 @@ export default function UpdateProfileInformation({
             </header>
 
             <form onSubmit={submit} className="mt-6 space-y-6">
-                <div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
                     <InputLabel htmlFor="name" value="Name" />
 
                     <TextInput
@@ -50,10 +59,10 @@ export default function UpdateProfileInformation({
                         autoComplete="name"
                     />
 
-                    <InputError className="mt-2" message={errors.name} />
-                </div>
+                        <InputError className="mt-2" message={errors.name} />
+                    </div>
 
-                <div>
+                    <div>
                     <InputLabel htmlFor="email" value="Email" />
 
                     <TextInput
@@ -66,7 +75,144 @@ export default function UpdateProfileInformation({
                         autoComplete="username"
                     />
 
-                    <InputError className="mt-2" message={errors.email} />
+                        <InputError className="mt-2" message={errors.email} />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <InputLabel htmlFor="phone" value="Phone (for verification)" />
+
+                        <TextInput
+                            id="phone"
+                            className="mt-1 block w-full"
+                            value={data.phone}
+                            onChange={(e) => setData('phone', e.target.value)}
+                            autoComplete="tel"
+                        />
+
+                        <InputError className="mt-2" message={errors.phone} />
+                    </div>
+
+                    <div>
+                        <InputLabel htmlFor="date_of_birth" value="Date of Birth" />
+
+                        <TextInput
+                            id="date_of_birth"
+                            type="date"
+                            className="mt-1 block w-full"
+                            value={data.date_of_birth}
+                            onChange={(e) =>
+                                setData('date_of_birth', e.target.value)
+                            }
+                        />
+
+                        <InputError
+                            className="mt-2"
+                            message={errors.date_of_birth}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <InputLabel htmlFor="country" value="Country" />
+
+                    <TextInput
+                        id="country"
+                        className="mt-1 block w-full"
+                        value={data.country}
+                        onChange={(e) => setData('country', e.target.value)}
+                        autoComplete="country-name"
+                    />
+
+                    <InputError className="mt-2" message={errors.country} />
+                </div>
+
+                <div>
+                    <InputLabel htmlFor="address_line1" value="Address line 1" />
+
+                    <TextInput
+                        id="address_line1"
+                        className="mt-1 block w-full"
+                        value={data.address_line1}
+                        onChange={(e) =>
+                            setData('address_line1', e.target.value)
+                        }
+                        autoComplete="address-line1"
+                    />
+
+                    <InputError
+                        className="mt-2"
+                        message={errors.address_line1}
+                    />
+                </div>
+
+                <div>
+                    <InputLabel htmlFor="address_line2" value="Address line 2" />
+
+                    <TextInput
+                        id="address_line2"
+                        className="mt-1 block w-full"
+                        value={data.address_line2}
+                        onChange={(e) =>
+                            setData('address_line2', e.target.value)
+                        }
+                        autoComplete="address-line2"
+                    />
+
+                    <InputError
+                        className="mt-2"
+                        message={errors.address_line2}
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                        <InputLabel htmlFor="city" value="City" />
+
+                        <TextInput
+                            id="city"
+                            className="mt-1 block w-full"
+                            value={data.city}
+                            onChange={(e) => setData('city', e.target.value)}
+                            autoComplete="address-level2"
+                        />
+
+                        <InputError className="mt-2" message={errors.city} />
+                    </div>
+
+                    <div>
+                        <InputLabel htmlFor="state" value="State / Region" />
+
+                        <TextInput
+                            id="state"
+                            className="mt-1 block w-full"
+                            value={data.state}
+                            onChange={(e) => setData('state', e.target.value)}
+                            autoComplete="address-level1"
+                        />
+
+                        <InputError className="mt-2" message={errors.state} />
+                    </div>
+
+                    <div>
+                        <InputLabel htmlFor="postal_code" value="Postal code" />
+
+                        <TextInput
+                            id="postal_code"
+                            className="mt-1 block w-full"
+                            value={data.postal_code}
+                            onChange={(e) =>
+                                setData('postal_code', e.target.value)
+                            }
+                            autoComplete="postal-code"
+                        />
+
+                        <InputError
+                            className="mt-2"
+                            message={errors.postal_code}
+                        />
+                    </div>
                 </div>
 
                 {mustVerifyEmail && user.email_verified_at === null && (

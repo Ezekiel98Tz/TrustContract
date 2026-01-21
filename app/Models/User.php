@@ -25,6 +25,16 @@ class User extends Authenticatable
         'role',
         'verification_status',
         'id_document_path',
+        'phone',
+        'country',
+        'address_line1',
+        'address_line2',
+        'city',
+        'state',
+        'postal_code',
+        'date_of_birth',
+        'verification_level',
+        'two_factor_enabled',
     ];
 
     /**

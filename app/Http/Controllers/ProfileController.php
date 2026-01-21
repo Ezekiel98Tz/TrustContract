@@ -18,9 +18,34 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+        $avg = \App\Models\ContractReview::where('reviewee_id', $user->id)->avg('rating');
+        $count = \App\Models\ContractReview::where('reviewee_id', $user->id)->count();
+        $recent = \App\Models\ContractReview::where('reviewee_id', $user->id)
+            ->with(['reviewer'])
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            'reputation' => [
+                'avg' => $avg ? round($avg, 2) : null,
+                'count' => $count,
+                'recent' => $recent->map(function ($rv) {
+                    return [
+                        'id' => $rv->id,
+                        'rating' => $rv->rating,
+                        'comment' => $rv->comment,
+                        'created_at' => $rv->created_at,
+                        'reviewer' => $rv->reviewer ? [
+                            'id' => $rv->reviewer->id,
+                            'name' => $rv->reviewer->name,
+                        ] : null,
+                    ];
+                })->values(),
+            ],
         ]);
     }
 

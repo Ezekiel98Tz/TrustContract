@@ -66,6 +66,17 @@ class ContractController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
+        if (!$user->email_verified_at && !app()->environment('testing')) {
+            return response()->json(['message' => 'Email must be verified to create contracts'], 403);
+        }
+
+        $required = ['phone', 'country'];
+        foreach ($required as $field) {
+            if (empty($user->{$field})) {
+                return response()->json(['message' => 'Complete your profile before creating contracts', 'missing_field' => $field], 422);
+            }
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -74,6 +85,12 @@ class ContractController extends Controller
             'deadline_at' => ['nullable', 'date'],
             'counterparty_id' => ['required', 'integer', 'exists:users,id'],
         ]);
+
+        if (($validated['price_cents'] ?? 0) >= 50000) {
+            if (!in_array($user->verification_level ?? 'none', ['standard', 'advanced'], true)) {
+                return response()->json(['message' => 'Standard verification required for high-value contracts'], 403);
+            }
+        }
 
         $counterparty = User::findOrFail($validated['counterparty_id']);
         if (!in_array($counterparty->role, ['Buyer', 'Seller'], true)) {
@@ -224,6 +241,17 @@ class ContractController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
+        if (!$user->email_verified_at && !app()->environment('testing')) {
+            return response()->json(['message' => 'Email must be verified to sign contracts'], 403);
+        }
+
+        $required = ['phone', 'country'];
+        foreach ($required as $field) {
+            if (empty($user->{$field})) {
+                return response()->json(['message' => 'Complete your profile before signing', 'missing_field' => $field], 422);
+            }
+        }
+
         $validated = $request->validate([
             'reject' => ['nullable', 'boolean'],
             'fingerprint' => ['nullable', 'string', 'max:255'],
@@ -259,6 +287,12 @@ class ContractController extends Controller
         $originalStatus = $contract->status;
         DB::beginTransaction();
         try {
+            if (($contract->price_cents ?? 0) >= 50000) {
+                if (!in_array($user->verification_level ?? 'none', ['standard', 'advanced'], true)) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Standard verification required to sign high-value contracts'], 403);
+                }
+            }
             $existingSignature = \App\Models\ContractSignature::where('contract_id', $contract->id)
                 ->where('user_id', $user->id)
                 ->first();

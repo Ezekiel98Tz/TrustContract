@@ -82,9 +82,9 @@ class VerificationController extends Controller
         $verification->notes = $validated['notes'] ?? null;
         $verification->save();
 
-        // Update user convenience status
         User::where('id', $verification->user_id)->update([
             'verification_status' => $validated['status'] === 'approved' ? 'verified' : 'rejected',
+            'verification_level' => $validated['status'] === 'approved' ? 'standard' : (new \Illuminate\Database\Query\Expression('verification_level')),
         ]);
 
         // Notify the user about the decision

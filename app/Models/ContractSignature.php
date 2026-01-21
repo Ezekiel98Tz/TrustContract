@@ -9,6 +9,12 @@ class ContractSignature extends Model
 {
     use HasFactory;
 
+    protected $hidden = [
+        'ip_address',
+        'device_info',
+        'fingerprint_hash',
+    ];
+
     protected $fillable = [
         'contract_id',
         'user_id',
