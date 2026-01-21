@@ -92,6 +92,13 @@ class ContractController extends Controller
             if (!in_array($user->verification_level ?? 'none', ['standard', 'advanced'], true)) {
                 return back()->withErrors(['verification' => 'Standard verification required for high-value contracts.']);
             }
+            $completion = $user->profileCompletion();
+            $minHigh = (int) config('trust.profile.min_for_high_value', 80);
+            if (($completion['percent'] ?? 0) < $minHigh) {
+                return back()->withErrors([
+                    'profile' => 'Increase profile completeness to proceed with high-value contracts.',
+                ])->with('redirect_to_profile', true);
+            }
         }
 
         if ($validated['counterparty_id'] == $user->id) {
@@ -334,6 +341,12 @@ class ContractController extends Controller
                 if (!in_array($user->verification_level ?? 'none', ['standard', 'advanced'], true)) {
                     DB::rollBack();
                     return back()->with('error', 'Standard verification required to sign high-value contracts.');
+                }
+                $completion = $user->profileCompletion();
+                $minHigh = (int) config('trust.profile.min_for_high_value', 80);
+                if (($completion['percent'] ?? 0) < $minHigh) {
+                    DB::rollBack();
+                    return back()->with('error', 'Increase profile completeness to sign high-value contracts.');
                 }
             }
             $now = now();

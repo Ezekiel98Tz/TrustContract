@@ -34,6 +34,10 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'trust' => $request->user() ? [
+                'verification_level' => $request->user()->verification_level ?? 'none',
+                'completion' => $request->user()->profileCompletion(),
+            ] : null,
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),

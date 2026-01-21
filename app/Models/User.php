@@ -60,6 +60,25 @@ class User extends Authenticatable
         ];
     }
 
+    public function profileCompletion(): array
+    {
+        $fields = [
+            'email_verified_at' => !!$this->email_verified_at,
+            'phone' => !!$this->phone,
+            'country' => !!$this->country,
+            'address_line1' => !!$this->address_line1,
+            'city' => !!$this->city,
+            'state' => !!$this->state,
+            'postal_code' => !!$this->postal_code,
+            'date_of_birth' => !!$this->date_of_birth,
+        ];
+        $total = count($fields);
+        $completed = array_sum(array_map(fn($v) => $v ? 1 : 0, $fields));
+        $percent = (int) round(($completed / max(1, $total)) * 100);
+        $missing = array_keys(array_filter($fields, fn($v) => !$v));
+        return ['percent' => $percent, 'missing' => $missing];
+    }
+
     // Relationships
     public function contractsAsBuyer()
     {
