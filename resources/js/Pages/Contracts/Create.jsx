@@ -7,7 +7,7 @@ import InputLabel from '@/components/InputLabel';
 import TextInput from '@/components/TextInput';
 import { composeTemplate } from '@/utils/contractTemplates';
 
-export default function Create({ auth }) {
+export default function Create({ auth, currencies = ['USD','EUR','TZS'], currency_thresholds = {}, min_for_high_value = 80 }) {
     const { data, setData, post, processing, errors } = useForm({
         title: '',
         description: '',
@@ -129,7 +129,8 @@ export default function Create({ auth }) {
                                                                     <div className="text-sm font-bold text-white">{u.name}</div>
                                                                     <div className="text-xs text-gray-400">{u.email} • {u.role}</div>
                                                                     <div className="mt-1 flex items-center gap-2">
-                                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
+                                                                        <span title="Advanced: enhanced checks • Standard: ID and address verified • Basic: email, phone, country • Unverified"
+                                                                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
                                                                             u.verification_status === 'verified'
                                                                                 ? 'bg-green-900 text-green-200 border-green-800'
                                                                                 : 'bg-red-900 text-red-200 border-red-800'
@@ -260,9 +261,9 @@ export default function Create({ auth }) {
                                                 className="mt-1 block w-full border-gray-700 bg-gray-900 text-white rounded-md"
                                                 onChange={(e) => setData('currency', e.target.value)}
                                             >
-                                                <option value="USD">USD</option>
-                                                <option value="EUR">EUR</option>
-                                                <option value="TZS">TZS</option>
+                                                {currencies.map((c) => (
+                                                    <option key={c} value={c}>{c}</option>
+                                                ))}
                                             </select>
                                         </div>
                                         <div className="md:col-span-2 flex items-end">
@@ -277,6 +278,9 @@ export default function Create({ auth }) {
                                                         const usd = (Number(data.price_cents || 0) * rate) / 100;
                                                         return usd.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
                                                     })()}
+                                                </p>
+                                                <p className="text-xs text-gray-400 mt-1">
+                                                    High-value threshold for {data.currency || 'USD'}: {(currency_thresholds[(data.currency || 'USD')] ?? 50000) / 100} {data.currency || 'USD'} • Requires Standard verification and ≥{min_for_high_value}% profile completeness
                                                 </p>
                                             </div>
                                         </div>
@@ -358,7 +362,8 @@ export default function Create({ auth }) {
                                     <h3 className="text-xl font-bold text-brand-gold">{insights.user.name}</h3>
                                     <div className="text-xs text-gray-400">{insights.user.email} • {insights.user.role}</div>
                                     <div className="mt-1 flex items-center gap-2">
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
+                                        <span title="Advanced: enhanced checks • Standard: ID and address verified • Basic: email, phone, country • Unverified"
+                                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
                                             insights.user.verification_status === 'verified'
                                                 ? 'bg-green-900 text-green-200 border-green-800'
                                                 : 'bg-red-900 text-red-200 border-red-800'

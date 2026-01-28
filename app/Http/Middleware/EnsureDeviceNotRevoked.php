@@ -23,6 +23,12 @@ class EnsureDeviceNotRevoked
                     $request->session()->regenerateToken();
                     return redirect()->route('login')->with('status', 'device-revoked');
                 }
+                if ($device && !$device->revoked_at) {
+                    $device->last_seen_at = now();
+                    $device->ip_address = (string) $request->ip();
+                    $device->user_agent = (string) $request->header('User-Agent');
+                    $device->save();
+                }
             }
         }
         return $next($request);

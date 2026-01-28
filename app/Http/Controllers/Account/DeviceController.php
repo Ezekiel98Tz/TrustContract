@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Account;
 use App\Http\Controllers\Controller;
 use App\Models\UserDevice;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,6 +28,12 @@ class DeviceController extends Controller
         $device = UserDevice::where('user_id', $request->user()->id)->findOrFail($id);
         $device->revoked_at = now();
         $device->save();
+        $table = config('session.table', 'sessions');
+        DB::table($table)
+            ->where('user_id', $request->user()->id)
+            ->where('ip_address', $device->ip_address)
+            ->where('user_agent', $device->user_agent)
+            ->delete();
         return Redirect::route('account.devices.index')->with('status', 'revoked');
     }
 }

@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
+import Tooltip from '@/components/Tooltip';
 import { useState } from 'react';
 
 export default function Index({ auth, users, filters }) {
@@ -70,11 +71,15 @@ export default function Index({ auth, users, filters }) {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                        ${user.verification_status === 'verified' ? 'bg-green-900 text-green-200' : 
-                                                          'bg-yellow-900 text-yellow-200'}`}>
-                                                        {user.verification_status}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span
+                                                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                            ${user.verification_status === 'verified' ? 'bg-green-900 text-green-200' : 
+                                                              'bg-yellow-900 text-yellow-200'}`}>
+                                                            {user.verification_status}{user.verification_level && user.verification_level !== 'none' ? ` • ${user.verification_level}` : ''}
+                                                        </span>
+                                                        <Tooltip label="Verification levels"><span>Advanced: enhanced checks • Standard: ID and address verified • Basic: email, phone, country • Unverified</span></Tooltip>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                                                     {new Date(user.created_at).toLocaleDateString()}

@@ -17,7 +17,8 @@ export default function Reviews({ auth, user, rating_avg, rating_count, reviews 
                                 <div>
                                     <div className="text-sm text-gray-400">{user.email} • {user.role}</div>
                                     <div className="mt-1 flex items-center gap-2">
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
+                                        <span title="Advanced: enhanced checks • Standard: ID and address verified • Basic: email, phone, country • Unverified"
+                                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
                                             user.verification_status === 'verified'
                                                 ? 'bg-green-900 text-green-200 border-green-800'
                                                 : 'bg-red-900 text-red-200 border-red-800'

@@ -5,6 +5,9 @@ namespace App\Http\Controllers\API\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Contract;
 use App\Models\User;
+use App\Models\TrustSetting;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -76,6 +79,11 @@ class ContractController extends Controller
                 return response()->json(['message' => 'Complete your profile before creating contracts', 'missing_field' => $field], 422);
             }
         }
+        $completion = $user->profileCompletion();
+        $minForContract = $this->minForContract();
+        if (($completion['percent'] ?? 0) < $minForContract) {
+            return response()->json(['message' => 'Increase profile completeness to create contracts', 'required_percent' => $minForContract], 422);
+        }
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -86,9 +94,15 @@ class ContractController extends Controller
             'counterparty_id' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        if (($validated['price_cents'] ?? 0) >= 50000) {
+        $currency = strtoupper($validated['currency'] ?? 'USD');
+        $threshold = $this->currencyThreshold($currency);
+        if (($validated['price_cents'] ?? 0) >= $threshold) {
             if (!in_array($user->verification_level ?? 'none', ['standard', 'advanced'], true)) {
                 return response()->json(['message' => 'Standard verification required for high-value contracts'], 403);
+            }
+            $minHigh = $this->minForHighValue();
+            if (($completion['percent'] ?? 0) < $minHigh) {
+                return response()->json(['message' => 'Increase profile completeness to proceed with high-value contracts', 'required_percent' => $minHigh], 422);
             }
         }
 
@@ -287,10 +301,17 @@ class ContractController extends Controller
         $originalStatus = $contract->status;
         DB::beginTransaction();
         try {
-            if (($contract->price_cents ?? 0) >= 50000) {
+            $threshold = $this->currencyThreshold(strtoupper($contract->currency ?? 'USD'));
+            if (($contract->price_cents ?? 0) >= $threshold) {
                 if (!in_array($user->verification_level ?? 'none', ['standard', 'advanced'], true)) {
                     DB::rollBack();
                     return response()->json(['message' => 'Standard verification required to sign high-value contracts'], 403);
+                }
+                $completion = $user->profileCompletion();
+                $minHigh = $this->minForHighValue();
+                if (($completion['percent'] ?? 0) < $minHigh) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Increase profile completeness to sign high-value contracts', 'required_percent' => $minHigh], 422);
                 }
             }
             $existingSignature = \App\Models\ContractSignature::where('contract_id', $contract->id)
@@ -486,5 +507,40 @@ class ContractController extends Controller
         }
 
         return response()->json(['contract' => $contract]);
+    }
+
+    private function getSettings()
+    {
+        if (!Schema::hasTable('trust_settings')) {
+            return null;
+        }
+        return Cache::remember('trust_settings_first', 60, function () {
+            return TrustSetting::first();
+        });
+    }
+    private function currencyThreshold(string $currency): int
+    {
+        $settings = $this->getSettings();
+        if ($settings && is_array($settings->currency_thresholds) && isset($settings->currency_thresholds[$currency])) {
+            return (int) $settings->currency_thresholds[$currency];
+        }
+        $thresholds = (array) config('currency.thresholds_cents', []);
+        return (int) ($thresholds[$currency] ?? $thresholds['USD'] ?? 50000);
+    }
+    private function minForHighValue(): int
+    {
+        $settings = $this->getSettings();
+        if ($settings && $settings->min_for_high_value !== null) {
+            return (int) $settings->min_for_high_value;
+        }
+        return (int) config('trust.profile.min_for_high_value', 80);
+    }
+    private function minForContract(): int
+    {
+        $settings = $this->getSettings();
+        if ($settings && $settings->min_for_contract !== null) {
+            return (int) $settings->min_for_contract;
+        }
+        return (int) config('trust.profile.min_for_contract', 50);
     }
 }

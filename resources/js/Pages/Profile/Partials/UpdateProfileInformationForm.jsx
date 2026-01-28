@@ -16,14 +16,7 @@ export default function UpdateProfileInformation({
         useForm({
             name: user.name ?? '',
             email: user.email ?? '',
-            phone: user.phone ?? '',
-            country: user.country ?? '',
-            address_line1: user.address_line1 ?? '',
-            address_line2: user.address_line2 ?? '',
-            city: user.city ?? '',
-            state: user.state ?? '',
-            postal_code: user.postal_code ?? '',
-            date_of_birth: user.date_of_birth ?? '',
+            profile_photo: null,
         });
 
     const submit = (e) => {
@@ -79,140 +72,25 @@ export default function UpdateProfileInformation({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                        <InputLabel htmlFor="phone" value="Phone (for verification)" />
-
-                        <TextInput
-                            id="phone"
-                            className="mt-1 block w-full"
-                            value={data.phone}
-                            onChange={(e) => setData('phone', e.target.value)}
-                            autoComplete="tel"
-                        />
-
-                        <InputError className="mt-2" message={errors.phone} />
-                    </div>
-
-                    <div>
-                        <InputLabel htmlFor="date_of_birth" value="Date of Birth" />
-
-                        <TextInput
-                            id="date_of_birth"
-                            type="date"
-                            className="mt-1 block w-full"
-                            value={data.date_of_birth}
-                            onChange={(e) =>
-                                setData('date_of_birth', e.target.value)
-                            }
-                        />
-
-                        <InputError
-                            className="mt-2"
-                            message={errors.date_of_birth}
-                        />
-                    </div>
-                </div>
-
                 <div>
-                    <InputLabel htmlFor="country" value="Country" />
-
-                    <TextInput
-                        id="country"
-                        className="mt-1 block w-full"
-                        value={data.country}
-                        onChange={(e) => setData('country', e.target.value)}
-                        autoComplete="country-name"
-                    />
-
-                    <InputError className="mt-2" message={errors.country} />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="address_line1" value="Address line 1" />
-
-                    <TextInput
-                        id="address_line1"
-                        className="mt-1 block w-full"
-                        value={data.address_line1}
-                        onChange={(e) =>
-                            setData('address_line1', e.target.value)
-                        }
-                        autoComplete="address-line1"
-                    />
-
-                    <InputError
-                        className="mt-2"
-                        message={errors.address_line1}
-                    />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="address_line2" value="Address line 2" />
-
-                    <TextInput
-                        id="address_line2"
-                        className="mt-1 block w-full"
-                        value={data.address_line2}
-                        onChange={(e) =>
-                            setData('address_line2', e.target.value)
-                        }
-                        autoComplete="address-line2"
-                    />
-
-                    <InputError
-                        className="mt-2"
-                        message={errors.address_line2}
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div>
-                        <InputLabel htmlFor="city" value="City" />
-
-                        <TextInput
-                            id="city"
-                            className="mt-1 block w-full"
-                            value={data.city}
-                            onChange={(e) => setData('city', e.target.value)}
-                            autoComplete="address-level2"
-                        />
-
-                        <InputError className="mt-2" message={errors.city} />
-                    </div>
-
-                    <div>
-                        <InputLabel htmlFor="state" value="State / Region" />
-
-                        <TextInput
-                            id="state"
-                            className="mt-1 block w-full"
-                            value={data.state}
-                            onChange={(e) => setData('state', e.target.value)}
-                            autoComplete="address-level1"
-                        />
-
-                        <InputError className="mt-2" message={errors.state} />
-                    </div>
-
-                    <div>
-                        <InputLabel htmlFor="postal_code" value="Postal code" />
-
-                        <TextInput
-                            id="postal_code"
-                            className="mt-1 block w-full"
-                            value={data.postal_code}
-                            onChange={(e) =>
-                                setData('postal_code', e.target.value)
-                            }
-                            autoComplete="postal-code"
-                        />
-
-                        <InputError
-                            className="mt-2"
-                            message={errors.postal_code}
+                    <InputLabel htmlFor="profile_photo" value="Profile Photo" />
+                    <div className="mt-2 flex items-center gap-3">
+                        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 overflow-hidden">
+                            {user.profile_photo_path ? (
+                                <img src={`/storage/${user.profile_photo_path}`} alt="Avatar" className="h-12 w-12 object-cover" />
+                            ) : (
+                                <span className="text-white font-bold">{user.name?.[0]?.toUpperCase() || 'U'}</span>
+                            )}
+                        </span>
+                        <input
+                            id="profile_photo"
+                            type="file"
+                            accept=".jpg,.jpeg,.png"
+                            onChange={(e) => setData('profile_photo', e.target.files[0])}
+                            className="block w-full text-sm text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-800 file:text-brand-gold hover:file:bg-gray-700"
                         />
                     </div>
+                    <InputError className="mt-2" message={errors.profile_photo} />
                 </div>
 
                 {mustVerifyEmail && user.email_verified_at === null && (

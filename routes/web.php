@@ -39,8 +39,12 @@ Route::get('/dashboard', function () {
 
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\VerificationController as AdminVerificationController;
+use App\Http\Controllers\Admin\BusinessVerificationController as AdminBusinessVerificationController;
+use App\Http\Controllers\Admin\TrustSettingsController as AdminTrustSettingsController;
 use App\Http\Controllers\PersonalInformationController;
+use App\Http\Controllers\BusinessInformationController;
 use App\Http\Controllers\Account\DeviceController;
+use App\Http\Controllers\Account\SessionController;
 
 Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureTwoFactorVerified::class, \App\Http\Middleware\EnsureDeviceNotRevoked::class])->group(function () {
     Route::get('/contracts', [ContractController::class, 'index'])->name('contracts.index');
@@ -94,9 +98,15 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureTwoFactorVerif
     
     Route::get('/verifications', [AdminVerificationController::class, 'index'])->name('verifications.index');
     Route::patch('/verifications/{verification}/review', [AdminVerificationController::class, 'review'])->name('verifications.review');
+
+    Route::get('/business-verifications', [AdminBusinessVerificationController::class, 'index'])->name('business-verifications.index');
+    Route::patch('/business-verifications/{verification}/review', [AdminBusinessVerificationController::class, 'review'])->name('business-verifications.review');
+
+    Route::get('/trust-settings', [AdminTrustSettingsController::class, 'index'])->name('trust-settings.index');
+    Route::patch('/trust-settings', [AdminTrustSettingsController::class, 'update'])->name('trust-settings.update');
 });
 
-Route::middleware(['auth', \App\Http\Middleware\EnsureTwoFactorVerified::class])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\EnsureTwoFactorVerified::class, \App\Http\Middleware\EnsureDeviceNotRevoked::class])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -105,8 +115,15 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureTwoFactorVerified::class])
     Route::patch('/account/personal-information', [PersonalInformationController::class, 'update'])->name('account.personal-information.update');
     Route::post('/account/personal-information/submit-id', [PersonalInformationController::class, 'submitId'])->name('account.personal-information.submit-id');
 
+    Route::get('/account/business-information', [BusinessInformationController::class, 'edit'])->name('account.business-information.edit');
+    Route::patch('/account/business-information', [BusinessInformationController::class, 'update'])->name('account.business-information.update');
+    Route::post('/account/business-information/submit-document', [BusinessInformationController::class, 'submitDocument'])->name('account.business-information.submit-document');
+
     Route::get('/account/devices', [DeviceController::class, 'index'])->name('account.devices.index');
     Route::post('/account/devices/{id}/revoke', [DeviceController::class, 'revoke'])->name('account.devices.revoke');
+    Route::get('/account/sessions', [SessionController::class, 'index'])->name('account.sessions.index');
+    Route::delete('/account/sessions/{id}', [SessionController::class, 'destroy'])->name('account.sessions.destroy');
+    Route::post('/account/sessions/destroy-others', [SessionController::class, 'destroyOthers'])->name('account.sessions.destroy_others');
 });
 
 require __DIR__.'/auth.php';

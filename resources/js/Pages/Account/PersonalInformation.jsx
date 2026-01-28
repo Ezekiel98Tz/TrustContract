@@ -6,7 +6,7 @@ import TextInput from '@/components/TextInput';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { Transition } from '@headlessui/react';
 
-export default function PersonalInformation({ completion, status }) {
+export default function PersonalInformation({ completion, status, countries }) {
     const user = usePage().props.auth.user;
 
     const { data, setData, patch, post, errors, processing, recentlySuccessful } =
@@ -29,6 +29,10 @@ export default function PersonalInformation({ completion, status }) {
     };
 
     const percent = completion?.percent ?? 0;
+    const emailOk = !!user.email_verified_at;
+    const level = user.verification_level ?? 'none';
+    const vstatus = user.verification_status ?? 'unverified';
+    const minReady = !!user.phone && !!user.country;
 
     return (
         <AuthenticatedLayout
@@ -41,6 +45,17 @@ export default function PersonalInformation({ completion, status }) {
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
                     <div className="bg-brand-black overflow-hidden shadow-lg sm:rounded-lg border border-gray-800">
                         <div className="p-6 text-gray-200">
+                            {!emailOk && (
+                                <div className="mb-6 rounded-md border border-yellow-700 bg-yellow-900/20 p-4">
+                                    <div className="text-sm font-semibold text-yellow-200">Verify your email</div>
+                                    <div className="mt-1 text-sm text-gray-200">You must verify your email before creating or signing agreements.</div>
+                                    <div className="mt-2">
+                                        <a href={route('verification.notice')} className="inline-flex items-center px-3 py-1 rounded-md bg-brand-gold text-brand-black text-xs font-bold hover:bg-yellow-500">
+                                            Go to Email Verification
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
                             <div className="mb-6">
                                 <div className="flex items-center justify-between">
                                     <div>
@@ -58,6 +73,20 @@ export default function PersonalInformation({ completion, status }) {
                                             />
                                         </div>
                                         <div className="mt-1 text-right text-xs text-gray-500">{percent}%</div>
+                                    </div>
+                                </div>
+                                <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className={`rounded-md border px-3 py-2 ${minReady ? 'border-green-800 bg-green-900/20' : 'border-yellow-700 bg-yellow-900/20'}`}>
+                                        <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Minimum for trades</div>
+                                        <div className="mt-1 text-sm text-gray-200">Phone and Country are required to create/sign.</div>
+                                    </div>
+                                    <div className="rounded-md border border-gray-700 bg-gray-800/40 px-3 py-2">
+                                        <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Current level</div>
+                                        <div className="mt-1 text-sm text-gray-200">{vstatus === 'verified' ? 'Verified' : 'Unverified'}{level && level !== 'none' ? ` • ${level}` : ''}</div>
+                                    </div>
+                                    <div className="rounded-md border border-gray-700 bg-gray-800/40 px-3 py-2">
+                                        <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Levels</div>
+                                        <div className="mt-1 text-xs text-gray-300">Basic: email, phone, country • Standard: ID + address • Advanced: enhanced checks</div>
                                     </div>
                                 </div>
                             </div>
@@ -104,13 +133,17 @@ export default function PersonalInformation({ completion, status }) {
 
                                 <div>
                                     <InputLabel htmlFor="country" value="Country" />
-                                    <TextInput
+                                    <select
                                         id="country"
-                                        className="mt-1 block w-full"
+                                        className="mt-1 block w-full rounded-md bg-gray-900 border-gray-800 text-gray-200"
                                         value={data.country}
                                         onChange={(e) => setData('country', e.target.value)}
-                                        autoComplete="country-name"
-                                    />
+                                    >
+                                        <option value="">Select country</option>
+                                        {countries && Object.entries(countries).map(([code, name]) => (
+                                            <option key={code} value={code}>{name}</option>
+                                        ))}
+                                    </select>
                                     <InputError className="mt-2" message={errors.country} />
                                 </div>
 
@@ -215,6 +248,14 @@ export default function PersonalInformation({ completion, status }) {
                                 {(recentlySuccessful || status === 'verification-submitted') && (
                                     <div className="mt-2 text-sm font-medium text-green-600">Verification submitted.</div>
                                 )}
+                                <div className="mt-4 rounded-md border border-gray-800 bg-gray-900 p-4">
+                                    <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Tips</div>
+                                    <ul className="mt-2 text-sm text-gray-300 space-y-1">
+                                        <li>Use your legal name and accurate address details.</li>
+                                        <li>Upload a clear photo of a government-issued ID.</li>
+                                        <li>Ensure your email and phone are active for notifications.</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>

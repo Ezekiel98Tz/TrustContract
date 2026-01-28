@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Contract;
 use App\Models\User;
+use App\Models\TrustSetting;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ContractController extends Controller
 {
@@ -60,8 +62,22 @@ class ContractController extends Controller
 
     public function create()
     {
+        $settings = null;
+        if (\Illuminate\Support\Facades\Schema::hasTable('trust_settings')) {
+            $settings = \App\Models\TrustSetting::first();
+        }
+        $thresholds = $settings && is_array($settings->currency_thresholds)
+            ? $settings->currency_thresholds
+            : (array) config('currency.thresholds_cents', []);
+        $currencies = array_keys($thresholds);
+        $minHigh = $settings && $settings->min_for_high_value !== null
+            ? (int) $settings->min_for_high_value
+            : (int) config('trust.profile.min_for_high_value', 80);
         return Inertia::render('Contracts/Create', [
-            'users' => []
+            'users' => [],
+            'currencies' => $currencies,
+            'currency_thresholds' => $thresholds,
+            'min_for_high_value' => $minHigh,
         ]);
     }
 
@@ -85,19 +101,23 @@ class ContractController extends Controller
             'counterparty_id' => ['required', 'exists:users,id'],
         ]);
 
-        $thresholds = (array) config('currency.thresholds_cents', []);
         $currency = strtoupper($validated['currency'] ?? 'USD');
-        $threshold = (int) ($thresholds[$currency] ?? $thresholds['USD'] ?? 50000);
+        $threshold = $this->currencyThreshold($currency);
         if (($validated['price_cents'] ?? 0) >= $threshold) {
             if (!in_array($user->verification_level ?? 'none', ['standard', 'advanced'], true)) {
                 return back()->withErrors(['verification' => 'Standard verification required for high-value contracts.']);
             }
             $completion = $user->profileCompletion();
-            $minHigh = (int) config('trust.profile.min_for_high_value', 80);
+            $minHigh = $this->minForHighValue();
             if (($completion['percent'] ?? 0) < $minHigh) {
                 return back()->withErrors([
                     'profile' => 'Increase profile completeness to proceed with high-value contracts.',
                 ])->with('redirect_to_profile', true);
+            }
+        } else {
+            $completionBase = $user->profileCompletion();
+            if (($completionBase['percent'] ?? 0) < $this->minForContract()) {
+                return back()->withErrors(['profile' => 'Increase profile completeness to create contracts.'])->with('redirect_to_profile', true);
             }
         }
 
@@ -107,9 +127,9 @@ class ContractController extends Controller
 
         $contract = new Contract([
             'title' => $validated['title'],
-            'description' => $validated['description'],
+            'description' => $validated['description'] ?? null,
             'price_cents' => $validated['price_cents'],
-            'deadline_at' => $validated['deadline_at'],
+            'deadline_at' => $validated['deadline_at'] ?? null,
             'currency' => strtoupper($validated['currency'] ?? 'USD'),
             'status' => 'draft',
         ]);
@@ -168,8 +188,7 @@ class ContractController extends Controller
             && in_array($contract->status, ['draft', 'pending_approval'], true)
             && !in_array($contract->status, ['finalized', 'cancelled'], true);
 
-        $thresholds = (array) config('currency.thresholds_cents', []);
-        $threshold = (int) ($thresholds[strtoupper($contract->currency ?? 'USD')] ?? $thresholds['USD'] ?? 50000);
+        $threshold = $this->currencyThreshold(strtoupper($contract->currency ?? 'USD'));
         $isHighValue = ($contract->price_cents ?? 0) >= $threshold;
         return Inertia::render('Contracts/Show', [
             'contract' => [
@@ -335,18 +354,28 @@ class ContractController extends Controller
         $originalStatus = $contract->status;
         DB::beginTransaction();
         try {
-            $thresholds = (array) config('currency.thresholds_cents', []);
-            $threshold = (int) ($thresholds[strtoupper($contract->currency ?? 'USD')] ?? $thresholds['USD'] ?? 50000);
+            $threshold = $this->currencyThreshold(strtoupper($contract->currency ?? 'USD'));
             if (($contract->price_cents ?? 0) >= $threshold) {
                 if (!in_array($user->verification_level ?? 'none', ['standard', 'advanced'], true)) {
                     DB::rollBack();
                     return back()->with('error', 'Standard verification required to sign high-value contracts.');
                 }
                 $completion = $user->profileCompletion();
-                $minHigh = (int) config('trust.profile.min_for_high_value', 80);
+                $minHigh = $this->minForHighValue();
                 if (($completion['percent'] ?? 0) < $minHigh) {
                     DB::rollBack();
                     return back()->with('error', 'Increase profile completeness to sign high-value contracts.');
+                }
+                $settings = null;
+                if (\Illuminate\Support\Facades\Schema::hasTable('trust_settings')) {
+                    $settings = \App\Models\TrustSetting::first();
+                }
+                if ($settings && ($settings->require_business_verification ?? false)) {
+                    $business = \App\Models\Business::where('user_id', $user->id)->first();
+                    if ($business && $business->verification_status !== 'verified') {
+                        DB::rollBack();
+                        return back()->with('error', 'Business verification required to sign high-value contracts.');
+                    }
                 }
             }
             $now = now();
@@ -453,6 +482,42 @@ class ContractController extends Controller
             'label' => $this->statusLabel($status),
             'tone' => $toneMap[$status] ?? 'neutral',
         ];
+    }
+
+    private function currencyThreshold(string $currency): int
+    {
+        $settings = null;
+        if (Schema::hasTable('trust_settings')) {
+            $settings = TrustSetting::first();
+        }
+        if ($settings && is_array($settings->currency_thresholds) && isset($settings->currency_thresholds[$currency])) {
+            return (int) $settings->currency_thresholds[$currency];
+        }
+        $thresholds = (array) config('currency.thresholds_cents', []);
+        return (int) ($thresholds[$currency] ?? $thresholds['USD'] ?? 50000);
+    }
+
+    private function minForHighValue(): int
+    {
+        $settings = null;
+        if (Schema::hasTable('trust_settings')) {
+            $settings = TrustSetting::first();
+        }
+        if ($settings && $settings->min_for_high_value !== null) {
+            return (int) $settings->min_for_high_value;
+        }
+        return (int) config('trust.profile.min_for_high_value', 80);
+    }
+    private function minForContract(): int
+    {
+        $settings = null;
+        if (Schema::hasTable('trust_settings')) {
+            $settings = TrustSetting::first();
+        }
+        if ($settings && $settings->min_for_contract !== null) {
+            return (int) $settings->min_for_contract;
+        }
+        return (int) config('trust.profile.min_for_contract', 50);
     }
 
     public function downloadPdf(Contract $contract)

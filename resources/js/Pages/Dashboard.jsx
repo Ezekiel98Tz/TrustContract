@@ -1,7 +1,9 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 
 export default function Dashboard({ auth, stats }) {
+    const { trust } = usePage().props;
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -28,6 +30,20 @@ export default function Dashboard({ auth, stats }) {
                                     >
                                         Go to Personal Information
                                     </Link>
+                                </div>
+                            </div>
+                        )}
+                        {trust?.completion?.percent !== undefined && (
+                            <div className="mt-4 rounded-md border border-gray-800 bg-brand-black p-4">
+                                <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Profile completeness</div>
+                                <div className="mt-2 flex items-center justify-between">
+                                    <div className="w-full mr-4 h-2 rounded bg-gray-700 overflow-hidden">
+                                        <div
+                                            style={{ width: `${Math.max(0, Math.min(100, Math.round(trust.completion.percent)))}%` }}
+                                            className={`h-2 ${trust.completion.percent >= 80 ? 'bg-green-500' : trust.completion.percent >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                        />
+                                    </div>
+                                    <div className="text-sm text-gray-200 font-semibold">{Math.round(trust.completion.percent)}%</div>
                                 </div>
                             </div>
                         )}

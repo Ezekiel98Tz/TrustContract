@@ -59,6 +59,6 @@ Route::middleware('auth')->group(function () {
         ->name('logout');
 
     Route::get('twofactor', [TwoFactorController::class, 'show'])->name('twofactor.challenge');
-    Route::post('twofactor/send', [TwoFactorController::class, 'send'])->name('twofactor.send');
-    Route::post('twofactor/verify', [TwoFactorController::class, 'verify'])->name('twofactor.verify');
+    Route::post('twofactor/send', [TwoFactorController::class, 'send'])->middleware('throttle:3,1')->name('twofactor.send');
+    Route::post('twofactor/verify', [TwoFactorController::class, 'verify'])->middleware('throttle:6,1')->name('twofactor.verify');
 });

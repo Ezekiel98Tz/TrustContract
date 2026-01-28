@@ -53,9 +53,16 @@ class TrustSafetyTest extends TestCase
             'price_cents' => 60000,
             'counterparty_id' => $seller->id,
         ]);
-        $resp->assertStatus(403);
+        $resp->assertStatus(422);
 
-        $buyer->update(['verification_level' => 'standard']);
+        $buyer->update([
+            'verification_level' => 'standard',
+            'address_line1' => 'A',
+            'city' => 'B',
+            'state' => 'C',
+            'postal_code' => '00100',
+            'date_of_birth' => '1990-01-01',
+        ]);
         Sanctum::actingAs($buyer->fresh());
 
         $resp = $this->postJson('/api/v1/contracts', [

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\PersonalInformationUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -32,14 +33,21 @@ class PersonalInformationController extends Controller
         return Inertia::render('Account/PersonalInformation', [
             'completion' => $completion,
             'status' => session('status'),
+            'countries' => config('countries.list'),
         ]);
     }
 
     public function update(PersonalInformationUpdateRequest $request): RedirectResponse
     {
         $user = $request->user();
+        $oldEmail = $user->email;
         $user->fill($request->validated());
         $user->save();
+        if ($oldEmail !== $user->email) {
+            $user->forceFill([
+                'remember_token' => Str::random(60),
+            ])->save();
+        }
 
         return Redirect::route('account.personal-information.edit')->with('status', 'saved');
     }

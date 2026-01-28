@@ -57,11 +57,13 @@ export default function Show({ auth, user, contracts, stats }) {
                                         <span className="px-3 py-1 bg-gray-800 text-gray-300 text-xs rounded-full font-bold uppercase tracking-wide border border-gray-700">
                                             {user.role}
                                         </span>
-                                        <span className={`px-3 py-1 text-xs rounded-full font-bold uppercase tracking-wide border
+                                        <span
+                                            title="Advanced: enhanced checks • Standard: ID and address verified • Basic: email, phone, country • Unverified"
+                                            className={`px-3 py-1 text-xs rounded-full font-bold uppercase tracking-wide border
                                             ${user.verification_status === 'verified' 
                                                 ? 'bg-green-900 text-green-200 border-green-700' 
                                                 : 'bg-yellow-900 text-yellow-200 border-yellow-700'}`}>
-                                            {verificationLabel(user.verification_status)}
+                                            {verificationLabel(user.verification_status)}{user.verification_level && user.verification_level !== 'none' ? ` • ${user.verification_level}` : ''}
                                         </span>
                                     </div>
                                 </div>

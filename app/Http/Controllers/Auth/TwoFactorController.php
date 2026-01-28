@@ -12,11 +12,15 @@ use Inertia\Response;
 
 class TwoFactorController extends Controller
 {
-    public function show(Request $request): Response
+    public function show(Request $request)
     {
+        $user = $request->user();
+        if (!$user->two_factor_enabled || $request->session()->get('two_factor_passed', false)) {
+            return \Inertia\Inertia::location(route('dashboard'));
+        }
         return Inertia::render('Auth/TwoFactorChallenge', [
             'status' => session('status'),
-            'expires_at' => $request->user()->two_factor_expires_at,
+            'expires_at' => $user->two_factor_expires_at,
         ]);
     }
 

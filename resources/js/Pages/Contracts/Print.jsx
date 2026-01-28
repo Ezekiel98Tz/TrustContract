@@ -63,7 +63,7 @@ export default function Print({ contract }) {
                         <div className="text-sm">
                             <div>{contract.buyer?.name}</div>
                             <div>{contract.buyer?.email}</div>
-                            <div>{contract.buyer?.verification_status === 'verified' ? 'Verified' : 'Unverified'}{contract.buyer?.verification_level && contract.buyer?.verification_level !== 'none' ? ` • ${contract.buyer.verification_level}` : ''}</div>
+                            <div title="Advanced: enhanced checks • Standard: ID and address verified • Basic: email, phone, country • Unverified">{contract.buyer?.verification_status === 'verified' ? 'Verified' : 'Unverified'}{contract.buyer?.verification_level && contract.buyer?.verification_level !== 'none' ? ` • ${contract.buyer.verification_level}` : ''}</div>
                         </div>
                     </div>
                     <div>
@@ -71,7 +71,7 @@ export default function Print({ contract }) {
                         <div className="text-sm">
                             <div>{contract.seller?.name}</div>
                             <div>{contract.seller?.email}</div>
-                            <div>{contract.seller?.verification_status === 'verified' ? 'Verified' : 'Unverified'}{contract.seller?.verification_level && contract.seller?.verification_level !== 'none' ? ` • ${contract.seller.verification_level}` : ''}</div>
+                            <div title="Advanced: enhanced checks • Standard: ID and address verified • Basic: email, phone, country • Unverified">{contract.seller?.verification_status === 'verified' ? 'Verified' : 'Unverified'}{contract.seller?.verification_level && contract.seller?.verification_level !== 'none' ? ` • ${contract.seller.verification_level}` : ''}</div>
                         </div>
                     </div>
                 </div>

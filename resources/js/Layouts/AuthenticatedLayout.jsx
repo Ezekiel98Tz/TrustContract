@@ -1,10 +1,11 @@
 import ApplicationLogo from '@/components/ApplicationLogo';
+import Tooltip from '@/components/Tooltip';
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useState, useRef } from 'react';
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
-    const { flash, notifications } = usePage().props;
+    const { flash, notifications, trust } = usePage().props;
     const [showFlash, setShowFlash] = useState(true);
     const [collapsed, setCollapsed] = useState(false);
     const isAdmin = user.role === 'Admin';
@@ -57,7 +58,7 @@ export default function AuthenticatedLayout({ header, children }) {
             return (
                 <div className="mt-4 px-3">
                     <div
-                        title="Trust Status"
+                        title="Advanced: enhanced checks • Standard: ID and address verified • Basic: email, phone, country • Unverified"
                         className={`rounded-md border px-2 py-1 text-center text-xs ${needsAttention ? 'border-yellow-700 bg-yellow-900/20' : 'border-gray-700 bg-gray-800/40'} text-gray-200`}
                     >
                         {vstatus === 'verified' ? 'V' : 'U'}{level && level !== 'none' ? `/${level[0].toUpperCase()}` : ''}
@@ -69,11 +70,27 @@ export default function AuthenticatedLayout({ header, children }) {
             <div className="mt-4">
                 <div className={`rounded-md border px-3 py-2 ${needsAttention ? 'border-yellow-700 bg-yellow-900/20' : 'border-gray-700 bg-gray-800/40'}`}>
                     <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                        Trust Status
+                        Trust Status <Tooltip label="Verification levels"><span>Advanced: enhanced checks • Standard: ID and address verified • Basic: email, phone, country • Unverified</span></Tooltip>
                     </div>
-                    <div className="mt-1 text-sm text-gray-200">
+                    <div
+                        title="Advanced: enhanced checks • Standard: ID and address verified • Basic: email, phone, country • Unverified"
+                        className="mt-1 text-sm text-gray-200">
                         {vstatus === 'verified' ? 'Verified' : 'Unverified'}{level && level !== 'none' ? ` • ${level}` : ''}
                     </div>
+                    {trust?.completion?.percent !== undefined && (
+                        <div className="mt-3">
+                            <div className="flex items-center justify-between text-xs text-gray-400">
+                                <span>Profile completeness</span>
+                                <span className="font-semibold text-gray-200">{Math.round(trust.completion.percent)}%</span>
+                            </div>
+                            <div className="mt-1 h-2 rounded bg-gray-700 overflow-hidden">
+                                <div
+                                    style={{ width: `${Math.max(0, Math.min(100, Math.round(trust.completion.percent)))}%` }}
+                                    className={`h-2 ${trust.completion.percent >= 80 ? 'bg-green-500' : trust.completion.percent >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                />
+                            </div>
+                        </div>
+                    )}
                     {needsAttention && (
                         <div className="mt-2">
                             <Link
@@ -82,6 +99,14 @@ export default function AuthenticatedLayout({ header, children }) {
                             >
                                 Complete Personal Information
                             </Link>
+                            {!emailOk && (
+                                <Link
+                                    href={route('verification.notice')}
+                                    className="ml-2 inline-flex items-center px-2 py-1 rounded-md bg-gray-800 text-gray-200 text-xs font-bold hover:bg-gray-700 border border-gray-700"
+                                >
+                                    Verify Email
+                                </Link>
+                            )}
                         </div>
                     )}
                 </div>
@@ -114,7 +139,9 @@ export default function AuthenticatedLayout({ header, children }) {
                     {navItem(route('dashboard'), 'Dashboard', route().current('dashboard'), 'dashboard')}
                     {navItem(route('contracts.index'), 'Contracts', route().current('contracts.*'), 'contracts')}
                     {navItem(route('account.personal-information.edit'), 'Personal Information', route().current('account.personal-information.*'), 'info')}
+                    {navItem(route('account.business-information.edit'), 'Business Verification', route().current('account.business-information.*'), 'verify')}
                     {navItem(route('account.devices.index'), 'Devices', route().current('account.devices.*'), 'devices')}
+                    {navItem(route('account.sessions.index'), 'Sessions', route().current('account.sessions.*'), 'devices')}
                     <Link
                         href={route('notifications.index')}
                         title="Notifications"
@@ -137,6 +164,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     </Link>
                     {isAdmin && navItem(route('admin.users.index'), 'Users (Admin)', route().current('admin.users.*'), 'users')}
                     {isAdmin && navItem(route('admin.verifications.index'), 'Verifications (Admin)', route().current('admin.verifications.*'), 'verify')}
+                    {isAdmin && navItem(route('admin.trust-settings.index'), 'Trust Settings (Admin)', route().current('admin.trust-settings.*'), 'verify')}
                 </nav>
                 <div className="px-3">{trustBadge()}</div>
             </aside>
@@ -164,8 +192,12 @@ export default function AuthenticatedLayout({ header, children }) {
                                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                                 className="flex items-center gap-3 rounded-full hover:bg-gray-800 px-2 py-1"
                             >
-                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 text-white font-bold">
-                                    {user.name?.[0]?.toUpperCase() || 'U'}
+                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 text-white font-bold overflow-hidden">
+                                    {user.profile_photo_path ? (
+                                        <img src={`/storage/${user.profile_photo_path}`} alt="Avatar" className="h-8 w-8 object-cover" />
+                                    ) : (
+                                        user.name?.[0]?.toUpperCase() || 'U'
+                                    )}
                                 </span>
                                 <div className="hidden sm:block text-right">
                                     <div className="text-sm font-semibold text-brand-gold">{user.name} ({user.role})</div>
