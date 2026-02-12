@@ -30,6 +30,7 @@ class ContractController extends Controller
 
         $contracts = $query->latest()->paginate(10)->through(function (Contract $contract) {
             $status = $this->presentStatus($contract->status);
+            $activeDisputes = \App\Models\Dispute::where('contract_id', $contract->id)->whereIn('status', ['open','mediate'])->count();
 
             return [
                 'id' => $contract->id,
@@ -41,6 +42,7 @@ class ContractController extends Controller
                 'created_at' => $contract->created_at,
                 'status_label' => $status['label'],
                 'status_tone' => $status['tone'],
+                'disputes_active' => $activeDisputes,
                 'buyer' => $contract->buyer ? [
                     'id' => $contract->buyer->id,
                     'name' => $contract->buyer->name,
@@ -62,6 +64,7 @@ class ContractController extends Controller
 
     public function create()
     {
+        $user = Auth::user();
         $settings = null;
         if (\Illuminate\Support\Facades\Schema::hasTable('trust_settings')) {
             $settings = \App\Models\TrustSetting::first();
@@ -73,11 +76,21 @@ class ContractController extends Controller
         $minHigh = $settings && $settings->min_for_high_value !== null
             ? (int) $settings->min_for_high_value
             : (int) config('trust.profile.min_for_high_value', 80);
+        $minContract = $settings && $settings->min_for_contract !== null
+            ? (int) $settings->min_for_contract
+            : (int) config('trust.profile.min_for_contract', 50);
+        $disputeWarn = $settings && $settings->dispute_rate_warn_percent !== null
+            ? (int) $settings->dispute_rate_warn_percent
+            : 5;
+        $completion = method_exists($user, 'profileCompletion') ? ($user->profileCompletion()['percent'] ?? null) : null;
         return Inertia::render('Contracts/Create', [
             'users' => [],
             'currencies' => $currencies,
             'currency_thresholds' => $thresholds,
             'min_for_high_value' => $minHigh,
+            'dispute_rate_warn_percent' => $disputeWarn,
+            'min_for_contract' => $minContract,
+            'profile_completion_percent' => $completion,
         ]);
     }
 
@@ -91,6 +104,7 @@ class ContractController extends Controller
             return back()->withErrors(['profile' => 'Complete your profile (phone, country) before creating contracts.'])
                 ->with('redirect_to_profile', true);
         }
+        
         
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -115,9 +129,9 @@ class ContractController extends Controller
                 ])->with('redirect_to_profile', true);
             }
         } else {
-            $completionBase = $user->profileCompletion();
-            if (($completionBase['percent'] ?? 0) < $this->minForContract()) {
-                return back()->withErrors(['profile' => 'Increase profile completeness to create contracts.'])->with('redirect_to_profile', true);
+            $overall = method_exists($user, 'overallCompletionPercent') ? $user->overallCompletionPercent() : ($user->profileCompletion()['percent'] ?? 0);
+            if ($overall < $this->minForContract()) {
+                return back()->withErrors(['profile' => 'Increase your overall verification (personal + business) to create contracts.'])->with('redirect_to_profile', true);
             }
         }
 
@@ -169,11 +183,21 @@ class ContractController extends Controller
         $buyerHistory = \App\Models\Contract::where('buyer_id', $contract->buyer_id)->where('status', 'finalized')->latest()->limit(5)->get(['id','title','created_at','price_cents','currency']);
         $sellerHistory = \App\Models\Contract::where('seller_id', $contract->seller_id)->where('status', 'finalized')->latest()->limit(5)->get(['id','title','created_at','price_cents','currency']);
         $ratings = [
-            'buyer_avg' => \App\Models\ContractReview::where('reviewee_id', $contract->buyer_id)->avg('rating'),
-            'buyer_count' => \App\Models\ContractReview::where('reviewee_id', $contract->buyer_id)->count(),
-            'seller_avg' => \App\Models\ContractReview::where('reviewee_id', $contract->seller_id)->avg('rating'),
-            'seller_count' => \App\Models\ContractReview::where('reviewee_id', $contract->seller_id)->count(),
+            'buyer_avg' => \App\Models\ContractReview::where('reviewee_id', $contract->buyer_id)->whereHas('contract', function ($q) {
+                $q->where('status', 'finalized');
+            })->avg('rating'),
+            'buyer_count' => \App\Models\ContractReview::where('reviewee_id', $contract->buyer_id)->whereHas('contract', function ($q) {
+                $q->where('status', 'finalized');
+            })->count(),
+            'seller_avg' => \App\Models\ContractReview::where('reviewee_id', $contract->seller_id)->whereHas('contract', function ($q) {
+                $q->where('status', 'finalized');
+            })->avg('rating'),
+            'seller_count' => \App\Models\ContractReview::where('reviewee_id', $contract->seller_id)->whereHas('contract', function ($q) {
+                $q->where('status', 'finalized');
+            })->count(),
         ];
+        $openDisputeCount = \App\Models\Dispute::where('contract_id', $contract->id)->where('status', 'open')->count();
+        $mediateCount = \App\Models\Dispute::where('contract_id', $contract->id)->where('status', 'mediate')->count();
         $myReviewExists = \App\Models\ContractReview::where('contract_id', $contract->id)->where('reviewer_id', $user->id)->exists();
         $reviews = \App\Models\ContractReview::where('contract_id', $contract->id)
             ->with(['reviewer'])
@@ -187,6 +211,9 @@ class ContractController extends Controller
             && !$hasSigned
             && in_array($contract->status, ['draft', 'pending_approval'], true)
             && !in_array($contract->status, ['finalized', 'cancelled'], true);
+        $bothSigned = \App\Models\ContractSignature::where('contract_id', $contract->id)->where('user_id', $contract->buyer_id)->exists()
+            && \App\Models\ContractSignature::where('contract_id', $contract->id)->where('user_id', $contract->seller_id)->exists();
+        $canFinalize = ($contract->status === 'signed') && $bothSigned && ($isParty || $user->role === 'Admin') && ($openDisputeCount === 0);
 
         $threshold = $this->currencyThreshold(strtoupper($contract->currency ?? 'USD'));
         $isHighValue = ($contract->price_cents ?? 0) >= $threshold;
@@ -275,7 +302,10 @@ class ContractController extends Controller
             'isBuyer' => $user->id === $contract->buyer_id,
             'isSeller' => $user->id === $contract->seller_id,
             'canSign' => $canSign,
-            'canReview' => in_array($contract->status, ['signed','finalized'], true) && !$myReviewExists && ($user->id === $contract->buyer_id || $user->id === $contract->seller_id),
+            'canFinalize' => $canFinalize,
+            'has_open_dispute' => $openDisputeCount > 0,
+            'has_active_mediation' => $mediateCount > 0,
+            'canReview' => ($contract->status === 'finalized') && !$myReviewExists && ($user->id === $contract->buyer_id || $user->id === $contract->seller_id),
             'downloadable' => in_array($contract->status, ['signed','finalized'], true),
             'parties' => [
                 'buyer' => [
@@ -320,6 +350,43 @@ class ContractController extends Controller
                 ],
             ],
         ]);
+    }
+
+    public function finalize(Request $request, Contract $contract)
+    {
+        $user = Auth::user();
+        if ($contract->buyer_id !== $user->id && $contract->seller_id !== $user->id && $user->role !== 'Admin') {
+            abort(403);
+        }
+        if ($contract->status !== 'signed') {
+            return back()->with('error', 'Contract can be finalized after both parties have signed.');
+        }
+        $buyerSigned = \App\Models\ContractSignature::where('contract_id', $contract->id)->where('user_id', $contract->buyer_id)->exists();
+        $sellerSigned = \App\Models\ContractSignature::where('contract_id', $contract->id)->where('user_id', $contract->seller_id)->exists();
+        if (!$buyerSigned || !$sellerSigned) {
+            return back()->with('error', 'Both parties must sign before finalization.');
+        }
+        $original = $contract->status;
+        $contract->status = 'finalized';
+        $contract->save();
+        \App\Models\ContractLog::create([
+            'contract_id' => $contract->id,
+            'actor_id' => $user->id,
+            'action' => 'status_changed',
+            'from_status' => $original,
+            'to_status' => 'finalized',
+        ]);
+        try {
+            if ($contract->buyer) {
+                $contract->buyer->notify(new \App\Notifications\ContractFinalizedNotification($contract));
+            }
+            if ($contract->seller) {
+                $contract->seller->notify(new \App\Notifications\ContractFinalizedNotification($contract));
+            }
+        } catch (\Throwable $e) {
+            // ignore notification failures
+        }
+        return redirect()->route('contracts.show', $contract->id)->with('success', 'Contract finalized. You can now leave a review.');
     }
 
     public function sign(Request $request, Contract $contract)

@@ -6,7 +6,7 @@ import TextInput from '@/components/TextInput';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { Transition } from '@headlessui/react';
 
-export default function BusinessInformation({ auth, business, verifications, status, countries }) {
+export default function BusinessInformation({ auth, business, verifications, status, countries, completion }) {
     const user = usePage().props.auth.user;
     const { data, setData, patch, post, errors, processing, recentlySuccessful } =
         useForm({
@@ -47,6 +47,16 @@ export default function BusinessInformation({ auth, business, verifications, sta
                                         <p className="text-sm text-gray-400">
                                             Provide your company details to begin verification.
                                         </p>
+                                    </div>
+                                    <div className="w-48">
+                                        <div className="text-xs text-gray-400 mb-1">Company completeness</div>
+                                        <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-2 bg-brand-gold"
+                                                style={{ width: `${Math.max(0, Math.min(100, completion?.percent ?? 0))}%` }}
+                                            />
+                                        </div>
+                                        <div className="mt-1 text-right text-xs text-gray-500">{Math.round(completion?.percent ?? 0)}%</div>
                                     </div>
                                 </div>
                             </div>
@@ -125,7 +135,10 @@ export default function BusinessInformation({ auth, business, verifications, sta
                                 <form
                                     onSubmit={(e) => {
                                         e.preventDefault();
-                                        post(route('account.business-information.submit-document'));
+                                        post(route('account.business-information.submit-document'), {
+                                            forceFormData: true,
+                                            preserveScroll: true,
+                                        });
                                     }}
                                     className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end"
                                 >
@@ -153,8 +166,11 @@ export default function BusinessInformation({ auth, business, verifications, sta
                                         />
                                         <InputError className="mt-2" message={errors.document} />
                                     </div>
-                                    <PrimaryButton disabled={processing || !data.document}>Submit</PrimaryButton>
+                                    <PrimaryButton disabled={processing || !data.document}>{processing ? 'Submitting…' : 'Submit'}</PrimaryButton>
                                 </form>
+                                <div className="mt-2 text-xs text-gray-400">
+                                    Accepted formats: JPG, PNG, PDF • Max size: 1 MB
+                                </div>
                                 {(recentlySuccessful || status === 'verification-submitted') && (
                                     <div className="mt-2 text-sm font-medium text-green-600">Verification submitted.</div>
                                 )}

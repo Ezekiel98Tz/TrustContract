@@ -2,17 +2,17 @@
 
 namespace App\Notifications;
 
-use App\Models\Verification;
+use App\Models\BusinessVerification;
 use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Notification;
 
-class VerificationReviewedNotification extends Notification implements ShouldQueue
+class BusinessVerificationReviewedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public Verification $verification)
+    public function __construct(public BusinessVerification $verification)
     {
     }
 
@@ -29,15 +29,16 @@ class VerificationReviewedNotification extends Notification implements ShouldQue
     public function toDatabase(object $notifiable): array
     {
         return [
-            'type' => 'verification_reviewed',
-            'verification_id' => $this->verification->id,
+            'type' => 'business_verification_reviewed',
+            'business_verification_id' => $this->verification->id,
+            'business_id' => $this->verification->business_id,
             'status' => $this->verification->status,
             'notes' => $this->verification->notes,
             'reviewed_by' => $this->verification->reviewed_by,
             'reviewed_at' => $this->verification->reviewed_at,
             'message' => $this->verification->status === 'approved'
-                ? 'Your verification has been approved.'
-                : 'Your verification has been rejected.',
+                ? 'Your business verification has been approved.'
+                : 'Your business verification has been rejected.',
         ];
     }
 
@@ -45,9 +46,9 @@ class VerificationReviewedNotification extends Notification implements ShouldQue
     {
         $approved = $this->verification->status === 'approved';
         return (new MailMessage)
-            ->subject($approved ? 'Verification Approved' : 'Verification Rejected')
+            ->subject($approved ? 'Business Verification Approved' : 'Business Verification Rejected')
             ->greeting('Hello,')
-            ->line($approved ? 'Your verification has been approved.' : 'Your verification has been rejected.')
+            ->line($approved ? 'Your business verification has been approved.' : 'Your business verification has been rejected.')
             ->line('Thanks for using TrustContract.');
     }
 }

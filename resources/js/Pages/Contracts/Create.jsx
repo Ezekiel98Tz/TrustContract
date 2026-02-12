@@ -7,7 +7,7 @@ import InputLabel from '@/components/InputLabel';
 import TextInput from '@/components/TextInput';
 import { composeTemplate } from '@/utils/contractTemplates';
 
-export default function Create({ auth, currencies = ['USD','EUR','TZS'], currency_thresholds = {}, min_for_high_value = 80 }) {
+export default function Create({ auth, currencies = ['USD','EUR','TZS'], currency_thresholds = {}, min_for_high_value = 80, dispute_rate_warn_percent = 5, min_for_contract = 50, profile_completion_percent = null }) {
     const { data, setData, post, processing, errors } = useForm({
         title: '',
         description: '',
@@ -25,8 +25,30 @@ export default function Create({ auth, currencies = ['USD','EUR','TZS'], currenc
     const [insightsOpen, setInsightsOpen] = useState(false);
     const [insights, setInsights] = useState(null);
 
+    const [clientError, setClientError] = useState('');
+    const isHighValue = (() => {
+        const threshold = currency_thresholds[(data.currency || 'USD')] ?? 50000;
+        return (Number(data.price_cents || 0)) >= threshold;
+    })();
+    const requiredPercent = isHighValue ? min_for_high_value : min_for_contract;
+    const completionPercent = typeof profile_completion_percent === 'number' ? profile_completion_percent : null;
+    const hasVerificationForHighValue = ['standard','advanced'].includes((auth?.user?.verification_level || 'none'));
+    const canSubmit = (() => {
+        if (isHighValue) {
+            return hasVerificationForHighValue && (completionPercent === null || completionPercent >= min_for_high_value);
+        }
+        return completionPercent === null || completionPercent >= min_for_contract;
+    })();
     const submit = (e) => {
         e.preventDefault();
+        setClientError('');
+        if (!canSubmit) {
+            const msg = isHighValue
+                ? `High-value requires standard verification and ≥${min_for_high_value}% profile completeness.`
+                : `Reach ≥${min_for_contract}% profile completeness to create contracts.`;
+            setClientError(msg);
+            return;
+        }
         post(route('contracts.store'));
     };
 
@@ -310,9 +332,44 @@ export default function Create({ auth, currencies = ['USD','EUR','TZS'], currenc
                                             <div className="text-sm text-gray-300">Price: {(data.price_cents / 100).toLocaleString('en-US', { style: 'currency', currency: data.currency || 'USD' })}</div>
                                             {data.deadline_at && <div className="text-sm text-gray-300">Deadline: {data.deadline_at}</div>}
                                         </div>
-                                        <div className="rounded-md border border-yellow-700 bg-yellow-900/20 p-4 text-sm text-yellow-200">
-                                            Ensure your counterparty is verified and rated. High-value contracts may require standard verification.
-                                        </div>
+                                        {clientError && (
+                                            <div className="rounded-md border border-yellow-700 bg-yellow-900/20 p-4 text-sm text-yellow-200">
+                                                <div className="font-semibold">Action Required</div>
+                                                <div className="mt-1">{clientError}</div>
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    {typeof completionPercent === 'number' && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border bg-gray-800 text-gray-300 border-gray-700">
+                                                            Current profile completeness: {completionPercent}%
+                                                        </span>
+                                                    )}
+                                                    <Link href={route('account.personal-information.edit')} className="inline-flex items-center px-3 py-1 rounded-md bg-brand-gold text-brand-black text-xs font-bold hover:bg-yellow-500">
+                                                        Go to Personal Information
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {!clientError && !canSubmit && (
+                                            <div className="rounded-md border border-yellow-700 bg-yellow-900/20 p-4 text-sm text-yellow-200">
+                                                <div className="font-semibold">Action Required</div>
+                                                <div className="mt-1">
+                                                    {isHighValue ? (
+                                                        <span>High-value requires standard verification and ≥{min_for_high_value}% profile completeness.</span>
+                                                    ) : (
+                                                        <span>Reach ≥{min_for_contract}% profile completeness to create contracts.</span>
+                                                    )}
+                                                </div>
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    {typeof completionPercent === 'number' && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border bg-gray-800 text-gray-300 border-gray-700">
+                                                            Current profile completeness: {completionPercent}%
+                                                        </span>
+                                                    )}
+                                                    <Link href={route('account.personal-information.edit')} className="inline-flex items-center px-3 py-1 rounded-md bg-brand-gold text-brand-black text-xs font-bold hover:bg-yellow-500">
+                                                        Go to Personal Information
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                                 <div className="flex items-center justify-between mt-6">
@@ -336,8 +393,12 @@ export default function Create({ auth, currencies = ['USD','EUR','TZS'], currenc
                                     ) : (
                                         <button
                                             type="submit"
-                                            className="ms-4 inline-flex items-center px-4 py-2 bg-brand-gold border border-transparent rounded-md font-bold text-xs text-brand-black uppercase tracking-widest hover:bg-yellow-500 focus:bg-yellow-500 active:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 transition ease-in-out duration-150"
-                                            disabled={processing}
+                                            className={`ms-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md font-bold text-xs uppercase tracking-widest transition ease-in-out duration-150 ${
+                                                canSubmit
+                                                    ? 'bg-brand-gold text-brand-black hover:bg-yellow-500 focus:bg-yellow-500 active:bg-yellow-600'
+                                                    : 'bg-gray-800 text-gray-400 cursor-not-allowed'
+                                            }`}
+                                            disabled={processing || !canSubmit}
                                         >
                                             Create Contract
                                         </button>
@@ -374,6 +435,17 @@ export default function Create({ auth, currencies = ['USD','EUR','TZS'], currenc
                                             <StarRating value={insights.user.rating_avg || 0} readOnly size={16} />
                                             <span className="ml-1 text-xs text-gray-400">({insights.user.rating_count})</span>
                                         </span>
+                                        <span
+                                            className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                                                (insights.user.dispute_rate || 0) >= (dispute_rate_warn_percent || 5)
+                                                    ? 'bg-red-900 text-red-200 border-red-800'
+                                                    : 'bg-yellow-900 text-yellow-200 border-yellow-800'
+                                            }`}
+                                            title="Dispute rate is based on disputes over paid/failed transactions"
+                                        >
+                                            Disputes {typeof insights.user.dispute_rate === 'number' ? `${insights.user.dispute_rate}%` : '—'}
+                                            {typeof insights.user.dispute_count === 'number' ? ` • ${insights.user.dispute_count}` : ''}
+                                        </span>
                                     </div>
                                 </div>
                                 <button
@@ -401,7 +473,9 @@ export default function Create({ auth, currencies = ['USD','EUR','TZS'], currenc
                                             {insights.recent_reviews.map((rv) => (
                                                 <li key={rv.id} className="bg-gray-900 p-3 rounded border border-gray-700">
                                                     <div className="flex items-center justify-between">
-                                                        <div className="text-xs text-gray-400">{rv.reviewer?.name || 'User'}</div>
+                                                        <div className="text-xs text-gray-400">
+                                                            {rv.reviewer?.name || 'User'}
+                                                        </div>
                                                         <StarRating value={rv.rating} readOnly size={16} />
                                                     </div>
                                                     {rv.comment && <p className="mt-1 text-xs text-gray-200">{rv.comment}</p>}
@@ -426,6 +500,23 @@ export default function Create({ auth, currencies = ['USD','EUR','TZS'], currenc
                                             ))}
                                         </ul>
                                     )}
+                                </div>
+                            </div>
+                            <div className="mt-4">
+                                <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wide">Risk Insights</h4>
+                                <div className="mt-2 grid grid-cols-3 gap-3">
+                                    <div className="bg-gray-900 p-3 rounded border border-gray-700">
+                                        <div className="text-[11px] text-gray-400">Paid</div>
+                                        <div className="text-sm font-bold text-gray-200">{insights.user.paid_count ?? '—'}</div>
+                                    </div>
+                                    <div className="bg-gray-900 p-3 rounded border border-gray-700">
+                                        <div className="text-[11px] text-gray-400">Failed</div>
+                                        <div className="text-sm font-bold text-gray-200">{insights.user.failed_count ?? '—'}</div>
+                                    </div>
+                                    <div className="bg-gray-900 p-3 rounded border border-gray-700">
+                                        <div className="text-[11px] text-gray-400">Disputes</div>
+                                        <div className="text-sm font-bold text-gray-200">{insights.user.dispute_count ?? '—'}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

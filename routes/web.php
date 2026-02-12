@@ -41,6 +41,9 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\VerificationController as AdminVerificationController;
 use App\Http\Controllers\Admin\BusinessVerificationController as AdminBusinessVerificationController;
 use App\Http\Controllers\Admin\TrustSettingsController as AdminTrustSettingsController;
+use App\Http\Controllers\Admin\HealthController as AdminHealthController;
+use App\Http\Controllers\Admin\DisputesController as AdminDisputesController;
+use App\Http\Controllers\DisputeController;
 use App\Http\Controllers\PersonalInformationController;
 use App\Http\Controllers\BusinessInformationController;
 use App\Http\Controllers\Account\DeviceController;
@@ -52,7 +55,9 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureTwoFactorVerif
     Route::post('/contracts', [ContractController::class, 'store'])->name('contracts.store');
     Route::get('/contracts/{contract}', [ContractController::class, 'show'])->name('contracts.show');
     Route::post('/contracts/{contract}/sign', [ContractController::class, 'sign'])->name('contracts.sign');
+    Route::post('/contracts/{contract}/finalize', [ContractController::class, 'finalize'])->name('contracts.finalize');
     Route::post('/contracts/{contract}/reviews', [ContractReviewController::class, 'store'])->name('contracts.reviews.store');
+    Route::post('/contracts/{contract}/disputes', [DisputeController::class, 'store'])->name('contracts.disputes.store');
     Route::get('/counterparties/search', [CounterpartyController::class, 'search'])->name('counterparties.search');
     Route::get('/counterparties/{id}', [CounterpartyController::class, 'insights'])->name('counterparties.insights');
     Route::get('/counterparties/{id}/reviews', function (\Illuminate\Http\Request $request, $id) {
@@ -104,6 +109,11 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureTwoFactorVerif
 
     Route::get('/trust-settings', [AdminTrustSettingsController::class, 'index'])->name('trust-settings.index');
     Route::patch('/trust-settings', [AdminTrustSettingsController::class, 'update'])->name('trust-settings.update');
+    Route::get('/db-health', [AdminHealthController::class, 'db'])->name('db-health');
+    Route::get('/disputes', [AdminDisputesController::class, 'index'])->name('disputes.index');
+    Route::get('/disputes/{dispute}', [AdminDisputesController::class, 'show'])->name('disputes.show');
+    Route::patch('/disputes/{dispute}/review', [AdminDisputesController::class, 'review'])->name('disputes.review');
+    Route::post('/disputes/{dispute}/messages', [\App\Http\Controllers\Admin\DisputeMessagesController::class, 'store'])->name('disputes.messages.store');
 });
 
 Route::middleware(['auth', \App\Http\Middleware\EnsureTwoFactorVerified::class, \App\Http\Middleware\EnsureDeviceNotRevoked::class])->group(function () {
@@ -124,6 +134,7 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureTwoFactorVerified::class, 
     Route::get('/account/sessions', [SessionController::class, 'index'])->name('account.sessions.index');
     Route::delete('/account/sessions/{id}', [SessionController::class, 'destroy'])->name('account.sessions.destroy');
     Route::post('/account/sessions/destroy-others', [SessionController::class, 'destroyOthers'])->name('account.sessions.destroy_others');
+    Route::get('/account/disputes', [\App\Http\Controllers\AccountDisputesController::class, 'index'])->name('account.disputes.index');
 });
 
 require __DIR__.'/auth.php';

@@ -11,6 +11,7 @@ class TrustSetting extends Model
     protected $fillable = [
         'min_for_contract',
         'min_for_high_value',
+        'dispute_rate_warn_percent',
         'currency_thresholds',
     ];
 

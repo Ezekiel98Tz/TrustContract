@@ -1,15 +1,12 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 
 export default function Index({ auth, verifications, filters }) {
-    const { patch, processing } = useForm();
+    const { processing } = useForm();
     const { flash } = usePage().props;
 
     const review = (id, status) => {
-        patch(route('admin.business-verifications.review', id), {
-            data: { status },
-            preserveScroll: true,
-        });
+        router.patch(route('admin.business-verifications.review', id), { status }, { preserveScroll: true });
     };
 
     return (

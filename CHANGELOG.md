@@ -1,5 +1,34 @@
 # Changelog
 
+All notable changes for TrustContract on 2026-02-12.
+
+## Added
+- Dispute lifecycle alignment: statuses open → mediate → resolved, with resolution outcome (won/lost/cancelled).
+- Admin Disputes page actions: Reopen, Mediate, Resolve with outcome; mediator auto‑assign on Mediate; success/error feedback.
+- Admin Dispute Detail page: assign mediator, mediation notes, messaging thread, and timeline/audit entries.
+- Account “My Disputes” page for buyers/sellers to track disputes with filters and details.
+- Dispute logs and messages tables; models to record status changes, mediator assignment, and messages.
+- Notifications (queued): BusinessVerificationReviewedNotification; DisputeCreatedNotification; DisputeStatusChangedNotification; MediatorAssignedNotification.
+- Contracts list badges: “Disputes: N” for active disputes (open/mediate).
+- Contract page chips: Open Dispute, Active Mediation, and Manage Disputes (Admin).
+- Dispute demo seeder with sample users, contracts, and disputes.
+
+## Changed
+- API signing gate now respects require_business_verification for high‑value parity with web.
+- Admin Disputes actions submit via router.patch with correct route params and payload.
+- Contracts Show props updated to accept dispute indicators to avoid runtime errors.
+
+## Fixed
+- White screen on Contract page due to missing props for dispute indicators.
+- Admin Disputes action submission failures by correcting request method and params.
+
+## Infrastructure
+- Migrations: disputes lifecycle columns (resolution, mediator_id, mediation_notes) and dispute_logs/dispute_messages tables.
+- Tests: ApiSettingsEnforcementTest, DisputeLifecycleTest, NotificationsPhase3Test updated/passing (51 tests).
+- KYC notification converted to queued delivery (ShouldQueue); added KYB and dispute notifications.
+
+---
+
 All notable changes for TrustContract on 2026-01-28.
 
 ## Added

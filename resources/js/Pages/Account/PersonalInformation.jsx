@@ -6,7 +6,7 @@ import TextInput from '@/components/TextInput';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { Transition } from '@headlessui/react';
 
-export default function PersonalInformation({ completion, status, countries }) {
+export default function PersonalInformation({ completion, status, countries, verifications }) {
     const user = usePage().props.auth.user;
 
     const { data, setData, patch, post, errors, processing, recentlySuccessful } =
@@ -229,10 +229,27 @@ export default function PersonalInformation({ completion, status, countries }) {
                                 <form
                                     onSubmit={(e) => {
                                         e.preventDefault();
-                                        post(route('account.personal-information.submit-id'));
+                                        post(route('account.personal-information.submit-id'), {
+                                            forceFormData: true,
+                                            preserveScroll: true,
+                                        });
                                     }}
-                                    className="mt-3 flex items-center gap-3"
+                                    className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-end"
                                 >
+                                    <div>
+                                        <InputLabel htmlFor="document_type" value="Document Type" />
+                                        <select
+                                            id="document_type"
+                                            className="mt-1 block w-full rounded-md bg-gray-900 border-gray-800 text-gray-200"
+                                            value={data.document_type || 'passport'}
+                                            onChange={(e) => setData('document_type', e.target.value)}
+                                        >
+                                            <option value="passport">Passport</option>
+                                            <option value="national_id">National ID</option>
+                                            <option value="driver_license">Driver’s License</option>
+                                            <option value="voters_id">Voter’s ID</option>
+                                        </select>
+                                    </div>
                                     <input
                                         id="document"
                                         type="file"
@@ -241,13 +258,46 @@ export default function PersonalInformation({ completion, status, countries }) {
                                         className="block w-full text-sm text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-800 file:text-brand-gold hover:file:bg-gray-700"
                                     />
                                     <PrimaryButton disabled={processing || !data.document}>
-                                        Submit
+                                        {processing ? 'Submitting…' : 'Submit'}
                                     </PrimaryButton>
                                     <InputError className="mt-2" message={errors.document} />
                                 </form>
+                                <div className="mt-2 text-xs text-gray-400">
+                                    Accepted formats: JPG, PNG, PDF • Max size: 1 MB
+                                </div>
                                 {(recentlySuccessful || status === 'verification-submitted') && (
                                     <div className="mt-2 text-sm font-medium text-green-600">Verification submitted.</div>
                                 )}
+                                <div className="mt-6">
+                                    <h5 className="text-sm font-bold text-brand-gold">Verification status</h5>
+                                    <div className="text-xs text-gray-400 mt-1">{vstatus === 'verified' ? 'Verified' : vstatus === 'pending' ? 'Pending review' : 'Unverified'}</div>
+                                    <div className="mt-3">
+                                        {verifications?.data?.length ? (
+                                            <ul className="space-y-2">
+                                                {verifications.data.map((v) => (
+                                                    <li key={v.id} className="bg-gray-900 p-3 rounded-lg border border-gray-700 text-sm text-gray-200">
+                                                        <div className="flex items-center justify-between">
+                                                            <span>{v.document_type || 'ID'}</span>
+                                                            <span className="text-gray-400">{v.status}</span>
+                                                        </div>
+                                                        <div className="mt-1">
+                                                            <a
+                                                                href={v.document_path ? `/storage/${v.document_path}` : '#'}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="text-brand-gold hover:text-white text-xs"
+                                                            >
+                                                                View
+                                                            </a>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <div className="text-sm text-gray-500">No submissions yet.</div>
+                                        )}
+                                    </div>
+                                </div>
                                 <div className="mt-4 rounded-md border border-gray-800 bg-gray-900 p-4">
                                     <div className="text-xs font-semibold uppercase tracking-wider text-gray-400">Tips</div>
                                     <ul className="mt-2 text-sm text-gray-300 space-y-1">

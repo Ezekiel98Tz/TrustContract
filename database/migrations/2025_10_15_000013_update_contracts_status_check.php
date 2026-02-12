@@ -8,9 +8,30 @@ return new class extends Migration {
     {
         $driver = DB::connection()->getDriverName();
         if ($driver === 'sqlite') {
-            // SQLite does not support altering check constraints in the same way; skip.
-            DB::statement("UPDATE contracts SET status = 'signed' WHERE status = 'active';");
-            DB::statement("UPDATE contracts SET status = 'finalized' WHERE status = 'completed';");
+            // Rebuild table to update enum/check constraint
+            DB::statement('CREATE TABLE contracts_tmp (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                buyer_id INTEGER NOT NULL,
+                seller_id INTEGER NOT NULL,
+                title VARCHAR NOT NULL,
+                description TEXT NULL,
+                price_cents BIGINT NOT NULL,
+                currency CHAR(3) NOT NULL DEFAULT \'USD\',
+                deadline_at DATETIME NULL,
+                status VARCHAR NOT NULL CHECK (status IN (\'draft\',\'pending_approval\',\'signed\',\'finalized\',\'cancelled\')) DEFAULT \'draft\',
+                buyer_accepted_at DATETIME NULL,
+                seller_accepted_at DATETIME NULL,
+                pdf_path VARCHAR NULL,
+                created_at DATETIME NULL,
+                updated_at DATETIME NULL
+            )');
+            DB::statement('INSERT INTO contracts_tmp (id,buyer_id,seller_id,title,description,price_cents,currency,deadline_at,status,buyer_accepted_at,seller_accepted_at,pdf_path,created_at,updated_at)
+                SELECT id,buyer_id,seller_id,title,description,price_cents,currency,deadline_at,
+                    CASE status WHEN \'active\' THEN \'signed\' WHEN \'completed\' THEN \'finalized\' ELSE status END AS status,
+                    buyer_accepted_at,seller_accepted_at,pdf_path,created_at,updated_at
+                FROM contracts');
+            DB::statement('DROP TABLE contracts');
+            DB::statement('ALTER TABLE contracts_tmp RENAME TO contracts');
             return;
         }
         if ($driver === 'mysql') {

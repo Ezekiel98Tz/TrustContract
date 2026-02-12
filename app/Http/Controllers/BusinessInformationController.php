@@ -23,6 +23,7 @@ class BusinessInformationController extends Controller
             'verifications' => $verifications,
             'status' => session('status'),
             'countries' => config('countries.list'),
+            'completion' => $business->completion(),
         ]);
     }
 
@@ -52,7 +53,7 @@ class BusinessInformationController extends Controller
     {
         $validated = $request->validate([
             'document_type' => ['required', 'in:business_registration,business_license,tax_certificate'],
-            'document' => ['required', 'file', 'mimes:jpeg,jpg,png,pdf', 'max:5120'],
+            'document' => ['required', 'file', 'mimes:jpeg,jpg,png,pdf', 'max:1024'],
         ]);
 
         $business = Business::firstOrCreate(['user_id' => $request->user()->id], ['company_name' => $request->user()->name . ' Company']);
@@ -67,6 +68,6 @@ class BusinessInformationController extends Controller
 
         $business->update(['verification_status' => 'pending']);
 
-        return Redirect::route('account.business-information.edit')->with('status', 'verification-submitted');
+        return Redirect::route('account.business-information.edit')->with('status', 'verification-submitted')->with('success', 'Verification submitted.');
     }
 }

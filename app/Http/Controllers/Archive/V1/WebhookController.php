@@ -240,6 +240,27 @@ class WebhookController extends Controller
         $txn->status = $mappedStatus;
         $txn->save();
 
+        // Record dispute entity for dispute events
+        if (is_string($event) && str_contains($event, 'dispute')) {
+            try {
+                \App\Models\Dispute::firstOrCreate(
+                    [
+                        'transaction_id' => $txn->id,
+                        'external_event_id' => (string) $eventId,
+                        'provider' => 'flutterwave',
+                    ],
+                    [
+                        'contract_id' => $txn->contract_id,
+                        'initiator_id' => null,
+                        'status' => 'open',
+                        'reason' => $data['reason'] ?? null,
+                    ]
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create dispute record', ['error' => $e->getMessage(), 'transaction_id' => $txn->id]);
+            }
+        }
+
         // Notify buyer and seller if status changed
         if ($statusChanged) {
             try {

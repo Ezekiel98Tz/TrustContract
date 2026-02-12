@@ -3,10 +3,14 @@ import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
 import StarRating from '@/components/StarRating';
 import { useState } from 'react';
 
-export default function Show({ auth, contract, canSign, canReview, downloadable, parties }) {
+export default function Show({ auth, contract, canSign, canFinalize, canReview, downloadable, parties, has_open_dispute, has_active_mediation }) {
     const { post, processing, data, setData } = useForm({ rating: 5, comment: '' });
     const [confirmSignOpen, setConfirmSignOpen] = useState(false);
     const [acknowledged, setAcknowledged] = useState(false);
+    const [reviewOpen, setReviewOpen] = useState(false);
+    const [issueOpen, setIssueOpen] = useState(false);
+    const [issueReason, setIssueReason] = useState('Item not received');
+    const [issueDetails, setIssueDetails] = useState('');
     const user = auth.user;
     const flash = usePage().props.flash;
 
@@ -40,6 +44,16 @@ export default function Show({ auth, contract, canSign, canReview, downloadable,
             onFinish: () => {
                 setConfirmSignOpen(false);
                 setAcknowledged(false);
+            },
+        });
+    };
+
+    const submitReview = () => {
+        if (processing) return;
+        post(route('contracts.reviews.store', contract.id), {
+            preserveScroll: true,
+            onFinish: () => {
+                setReviewOpen(false);
             },
         });
     };
@@ -80,6 +94,34 @@ export default function Show({ auth, contract, canSign, canReview, downloadable,
                                         <p className="text-sm text-gray-400 mt-1">
                                             Created on {new Date(contract.created_at).toLocaleDateString()}
                                         </p>
+                                            {(has_open_dispute || typeof has_active_mediation !== 'undefined') && (
+                                                <div className="mt-2 flex gap-2">
+                                                    {has_open_dispute && (
+                                                        <Link
+                                                            href={route('account.disputes.index', { status: 'open' })}
+                                                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-orange-900 text-orange-200 border border-orange-800"
+                                                        >
+                                                            Open Dispute
+                                                        </Link>
+                                                    )}
+                                                    {has_active_mediation && (
+                                                        <Link
+                                                            href={route('account.disputes.index', { status: 'mediate' })}
+                                                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-900 text-blue-200 border border-blue-800"
+                                                        >
+                                                            Active Mediation
+                                                        </Link>
+                                                    )}
+                                                    {auth.user.role === 'Admin' && (
+                                                        <Link
+                                                            href={route('admin.disputes.index')}
+                                                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-900 text-gray-200 border border-gray-800"
+                                                        >
+                                                            Manage Disputes
+                                                        </Link>
+                                                    )}
+                                                </div>
+                                            )}
                                     </div>
                                     <div className="flex flex-col items-end">
                                         <span className={`px-4 py-2 inline-flex text-sm leading-5 font-bold rounded-full uppercase tracking-wider
@@ -252,7 +294,12 @@ export default function Show({ auth, contract, canSign, canReview, downloadable,
                                         {contract.reviews.map((rv) => (
                                             <li key={rv.id} className="bg-gray-900 p-4 rounded-lg border border-gray-700">
                                                 <div className="flex items-center justify-between">
-                                                    <div className="text-sm text-gray-400">By {rv.reviewer?.name ?? `User #${rv.reviewer_id}`}</div>
+                                                    <div className="text-sm text-gray-400">
+                                                        By {rv.reviewer?.name ?? `User #${rv.reviewer_id}`}
+                                                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border bg-gray-800 text-gray-300 border-gray-700">
+                                                            {rv.reviewer_id === contract.buyer_id ? 'Buyer' : (rv.reviewer_id === contract.seller_id ? 'Seller' : 'Party')}
+                                                        </span>
+                                                    </div>
                                                     <StarRating value={rv.rating} readOnly size={18} />
                                                 </div>
                                                 {rv.comment && <p className="mt-2 text-gray-200 text-sm">{rv.comment}</p>}
@@ -457,6 +504,38 @@ export default function Show({ auth, contract, canSign, canReview, downloadable,
                                         Printable Version
                                     </Link>
                                 )}
+                                {canFinalize && (
+                                    <button
+                                        onClick={() => {
+                                            post(route('contracts.finalize', contract.id), {
+                                                onFinish: () => setReviewOpen(true),
+                                            });
+                                        }}
+                                        disabled={processing}
+                                        className="inline-flex items-center px-4 py-2 bg-green-900 border border-green-800 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-800"
+                                        title="Finalize the contract to enable reviews"
+                                    >
+                                        Finalize & Review
+                                    </button>
+                                )}
+                                {contract.status_label === 'Signed' && (
+                                    <button
+                                        onClick={() => setIssueOpen(true)}
+                                        className="inline-flex items-center px-4 py-2 bg-orange-900 border border-orange-800 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-800"
+                                        title="Report an issue before finalization"
+                                    >
+                                        Report Issue
+                                    </button>
+                                )}
+                                {canReview && (
+                                    <button
+                                        onClick={() => setReviewOpen(true)}
+                                        className="inline-flex items-center px-4 py-2 bg-blue-900 border border-blue-800 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-800"
+                                        title="Leave a review for your counterparty"
+                                    >
+                                        Leave Review
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => {
                                         if (confirm('Deleting this contract removes the agreement from storage. You are responsible for deletion. Continue?')) {
@@ -526,6 +605,118 @@ export default function Show({ auth, contract, canSign, canReview, downloadable,
                                     className="inline-flex items-center px-5 py-2 rounded-md bg-brand-gold text-brand-black font-bold text-sm hover:bg-yellow-500 disabled:opacity-50"
                                 >
                                     {processing ? 'Signing…' : 'Sign & Agree'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {reviewOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                    <div
+                        className="absolute inset-0 bg-black/70"
+                        onClick={() => !processing && setReviewOpen(false)}
+                        aria-hidden="true"
+                    />
+                    <div className="relative w-full max-w-lg rounded-xl bg-brand-black border border-gray-800 shadow-2xl">
+                        <div className="p-6">
+                            <h3 className="text-xl font-bold text-brand-gold">Leave a Review</h3>
+                            <p className="mt-2 text-sm text-gray-300">Rate your experience with the other party. Reviews are available after finalization.</p>
+                            <div className="mt-4 space-y-4">
+                                <div>
+                                    <div className="text-sm text-gray-300 mb-1">Rating</div>
+                                    <StarRating value={data.rating} onChange={(v) => setData('rating', v)} size={22} />
+                                </div>
+                                <div>
+                                    <div className="text-sm text-gray-300 mb-1">Comment (optional)</div>
+                                    <textarea
+                                        className="w-full rounded-md bg-gray-900 border-gray-700 text-white focus:border-brand-gold focus:ring-brand-gold"
+                                        rows={4}
+                                        value={data.comment}
+                                        onChange={(e) => setData('comment', e.target.value)}
+                                        placeholder="Share details that would help others"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => !processing && setReviewOpen(false)}
+                                    className="px-4 py-2 rounded-md border border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={submitReview}
+                                    disabled={processing}
+                                    className="px-4 py-2 bg-brand-gold text-brand-black rounded-md font-bold hover:bg-yellow-500 disabled:opacity-50"
+                                >
+                                    {processing ? 'Submitting...' : 'Submit Review'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {issueOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+                    <div
+                        className="absolute inset-0 bg-black/70"
+                        onClick={() => !processing && setIssueOpen(false)}
+                        aria-hidden="true"
+                    />
+                    <div className="relative w-full max-w-lg rounded-xl bg-brand-black border border-gray-800 shadow-2xl">
+                        <div className="p-6">
+                            <h3 className="text-xl font-bold text-brand-gold">Report Issue</h3>
+                            <p className="mt-2 text-sm text-gray-300">Let the other party know there is a problem. This records a dispute.</p>
+                            <div className="mt-4 space-y-4">
+                                <div>
+                                    <div className="text-sm text-gray-300 mb-1">Reason</div>
+                                    <select
+                                        className="w-full rounded-md bg-gray-900 border-gray-700 text-white focus:border-brand-gold focus:ring-brand-gold"
+                                        value={issueReason}
+                                        onChange={(e) => setIssueReason(e.target.value)}
+                                    >
+                                        <option>Item not received</option>
+                                        <option>Defective / Not as described</option>
+                                        <option>Payment issue</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <div className="text-sm text-gray-300 mb-1">Details (optional)</div>
+                                    <textarea
+                                        className="w-full rounded-md bg-gray-900 border-gray-700 text-white focus:border-brand-gold focus:ring-brand-gold"
+                                        rows={4}
+                                        value={issueDetails}
+                                        onChange={(e) => setIssueDetails(e.target.value)}
+                                        placeholder="Provide any evidence or context"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => !processing && setIssueOpen(false)}
+                                    className="px-4 py-2 rounded-md border border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        post(route('contracts.disputes.store', contract.id), {
+                                            data: { reason: issueReason, details: issueDetails },
+                                            onFinish: () => setIssueOpen(false),
+                                        });
+                                    }}
+                                    disabled={processing}
+                                    className="px-4 py-2 bg-orange-500 text-brand-black rounded-md font-bold hover:bg-orange-400 disabled:opacity-50"
+                                >
+                                    {processing ? 'Reporting...' : 'Submit Issue'}
                                 </button>
                             </div>
                         </div>

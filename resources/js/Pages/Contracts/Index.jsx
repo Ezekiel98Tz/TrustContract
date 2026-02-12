@@ -90,6 +90,11 @@ export default function Index({ auth, contracts, filters }) {
                                                                 ${toneClass(contract.status_tone)}`}>
                                                                 {contract.status_label}
                                                             </span>
+                                                            {contract.disputes_active > 0 && (
+                                                                <span className="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-900 text-orange-200 border border-orange-800" title="Active disputes on this contract">
+                                                                    Disputes: {contract.disputes_active}
+                                                                </span>
+                                                            )}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                                                             {new Date(contract.created_at).toLocaleDateString()}

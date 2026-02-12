@@ -29,14 +29,35 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $personal = $user ? $user->profileCompletion() : null;
+        $business = null;
+        if ($user) {
+            try {
+                $biz = $user->business;
+                if ($biz) {
+                    $business = $biz->completion();
+                }
+            } catch (\Throwable $e) {}
+        }
+        $overall = null;
+        if ($personal || $business) {
+            $parts = [];
+            if ($personal) $parts[] = $personal['percent'] ?? 0;
+            if ($business) $parts[] = $business['percent'] ?? 0;
+            $overall = count($parts) ? (int) round(array_sum($parts) / count($parts)) : null;
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
-            'trust' => $request->user() ? [
-                'verification_level' => $request->user()->verification_level ?? 'none',
-                'completion' => $request->user()->profileCompletion(),
+            'trust' => $user ? [
+                'verification_level' => $user->verification_level ?? 'none',
+                'personal' => $personal,
+                'business' => $business,
+                'overall' => $overall,
             ] : null,
             'flash' => [
                 'success' => $request->session()->get('success'),

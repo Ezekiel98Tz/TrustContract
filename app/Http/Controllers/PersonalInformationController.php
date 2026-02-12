@@ -15,25 +15,14 @@ class PersonalInformationController extends Controller
     public function edit(Request $request): Response
     {
         $user = $request->user();
-        $fields = [
-            'phone', 'country', 'address_line1', 'city', 'state', 'postal_code', 'date_of_birth',
-        ];
-        $filled = 0;
-        foreach ($fields as $f) {
-            if (!empty($user->{$f})) {
-                $filled++;
-            }
-        }
-        $completion = [
-            'filled' => $filled,
-            'total' => count($fields),
-            'percent' => (int) floor(($filled / max(1, count($fields))) * 100),
-        ];
+        $completion = $user->profileCompletion();
+        $verifications = \App\Models\Verification::where('user_id', $user->id)->latest()->paginate(10);
 
         return Inertia::render('Account/PersonalInformation', [
             'completion' => $completion,
             'status' => session('status'),
             'countries' => config('countries.list'),
+            'verifications' => $verifications,
         ]);
     }
 
@@ -55,14 +44,17 @@ class PersonalInformationController extends Controller
     public function submitId(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'document' => ['required', 'file', 'mimes:jpeg,jpg,png,pdf', 'max:5120'],
+            'document' => ['required', 'file', 'mimes:jpeg,jpg,png,pdf', 'max:1024'],
+            'document_type' => ['sometimes', 'in:passport,national_id,driver_license,voters_id'],
         ]);
 
         $path = $validated['document']->store('ids', 'public');
+        $type = $validated['document_type'] ?? 'passport';
 
         \App\Models\Verification::create([
             'user_id' => $request->user()->id,
             'document_path' => $path,
+            'document_type' => $type,
             'status' => 'pending',
         ]);
 
@@ -71,6 +63,6 @@ class PersonalInformationController extends Controller
             'verification_status' => 'pending',
         ]);
 
-        return Redirect::route('account.personal-information.edit')->with('status', 'verification-submitted');
+        return Redirect::route('account.personal-information.edit')->with('status', 'verification-submitted')->with('success', 'Verification submitted.');
     }
 }

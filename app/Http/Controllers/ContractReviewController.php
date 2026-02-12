@@ -17,8 +17,8 @@ class ContractReviewController extends Controller
             abort(403);
         }
 
-        if (!in_array($contract->status, ['signed','finalized'], true)) {
-            return Redirect::back()->with('error', 'You can only review signed or finalized contracts.');
+        if ($contract->status !== 'finalized') {
+            return Redirect::back()->with('error', 'You can only review finalized contracts.');
         }
 
         $validated = $request->validate([

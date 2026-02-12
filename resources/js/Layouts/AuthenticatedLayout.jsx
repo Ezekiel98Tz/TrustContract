@@ -77,17 +77,21 @@ export default function AuthenticatedLayout({ header, children }) {
                         className="mt-1 text-sm text-gray-200">
                         {vstatus === 'verified' ? 'Verified' : 'Unverified'}{level && level !== 'none' ? ` • ${level}` : ''}
                     </div>
-                    {trust?.completion?.percent !== undefined && (
+                    {typeof trust?.overall === 'number' && (
                         <div className="mt-3">
                             <div className="flex items-center justify-between text-xs text-gray-400">
-                                <span>Profile completeness</span>
-                                <span className="font-semibold text-gray-200">{Math.round(trust.completion.percent)}%</span>
+                                <span>Overall completion</span>
+                                <span className="font-semibold text-gray-200">{Math.round(trust.overall)}%</span>
                             </div>
                             <div className="mt-1 h-2 rounded bg-gray-700 overflow-hidden">
                                 <div
-                                    style={{ width: `${Math.max(0, Math.min(100, Math.round(trust.completion.percent)))}%` }}
-                                    className={`h-2 ${trust.completion.percent >= 80 ? 'bg-green-500' : trust.completion.percent >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                    style={{ width: `${Math.max(0, Math.min(100, Math.round(trust.overall)))}%` }}
+                                    className={`h-2 ${trust.overall >= 80 ? 'bg-green-500' : trust.overall >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
                                 />
+                            </div>
+                            <div className="mt-1 text-[11px] text-gray-500">
+                                {typeof trust?.personal?.percent === 'number' && <span>Personal: {trust.personal.percent}%</span>}
+                                {typeof trust?.business?.percent === 'number' && <span className="ml-2">Business: {trust.business.percent}%</span>}
                             </div>
                         </div>
                     )}
@@ -142,6 +146,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     {navItem(route('account.business-information.edit'), 'Business Verification', route().current('account.business-information.*'), 'verify')}
                     {navItem(route('account.devices.index'), 'Devices', route().current('account.devices.*'), 'devices')}
                     {navItem(route('account.sessions.index'), 'Sessions', route().current('account.sessions.*'), 'devices')}
+                    {navItem(route('account.disputes.index'), 'Disputes', route().current('account.disputes.*'), 'contracts')}
                     <Link
                         href={route('notifications.index')}
                         title="Notifications"
@@ -165,6 +170,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     {isAdmin && navItem(route('admin.users.index'), 'Users (Admin)', route().current('admin.users.*'), 'users')}
                     {isAdmin && navItem(route('admin.verifications.index'), 'Verifications (Admin)', route().current('admin.verifications.*'), 'verify')}
                     {isAdmin && navItem(route('admin.trust-settings.index'), 'Trust Settings (Admin)', route().current('admin.trust-settings.*'), 'verify')}
+                    {isAdmin && navItem(route('admin.disputes.index'), 'Disputes (Admin)', route().current('admin.disputes.*'), 'contracts')}
                 </nav>
                 <div className="px-3">{trustBadge()}</div>
             </aside>

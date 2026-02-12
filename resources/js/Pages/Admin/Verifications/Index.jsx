@@ -1,15 +1,12 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 
 export default function Index({ auth, verifications, filters }) {
-    const { patch, processing } = useForm();
+    const { processing } = useForm();
     const { flash } = usePage().props;
 
     const review = (id, status) => {
-        patch(route('admin.verifications.review', id), {
-            data: { status },
-            preserveScroll: true,
-        });
+        router.patch(route('admin.verifications.review', id), { status }, { preserveScroll: true });
     };
 
     return (
@@ -70,6 +67,7 @@ export default function Index({ auth, verifications, filters }) {
                                             <tr>
                                                 <th className="px-6 py-3 text-left text-xs font-bold text-brand-gold uppercase tracking-wider">User</th>
                                                 <th className="px-6 py-3 text-left text-xs font-bold text-brand-gold uppercase tracking-wider">Status</th>
+                                                <th className="px-6 py-3 text-left text-xs font-bold text-brand-gold uppercase tracking-wider">Doc Type</th>
                                                 <th className="px-6 py-3 text-left text-xs font-bold text-brand-gold uppercase tracking-wider">Document</th>
                                                 <th className="px-6 py-3 text-right text-xs font-bold text-brand-gold uppercase tracking-wider">Action</th>
                                             </tr>
@@ -81,6 +79,7 @@ export default function Index({ auth, verifications, filters }) {
                                                         {v.user?.name} <span className="text-gray-500">({v.user?.email})</span>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{v.status}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{v.document_type || '-'}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                         <a
                                                             href={v.document_path ? `/storage/${v.document_path}` : '#'}

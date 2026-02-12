@@ -52,6 +52,12 @@ class BusinessVerificationController extends Controller
                 'verification_status' => $validated['status'] === 'approved' ? 'verified' : 'rejected',
                 'verification_level' => $validated['status'] === 'approved' ? 'standard' : ($verification->business->verification_level),
             ]);
+            try {
+                $owner = \App\Models\User::find($verification->business->user_id);
+                if ($owner) {
+                    $owner->notify(new \App\Notifications\BusinessVerificationReviewedNotification($verification));
+                }
+            } catch (\Throwable $e) {}
         }
 
         return back()->with('success', 'Business verification reviewed.');

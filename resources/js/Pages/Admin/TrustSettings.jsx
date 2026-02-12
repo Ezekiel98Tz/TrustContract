@@ -6,6 +6,7 @@ export default function TrustSettings({ auth, settings, currencies }) {
     const { data, setData, patch, processing, errors, recentlySuccessful } = useForm({
         min_for_contract: settings?.min_for_contract ?? 50,
         min_for_high_value: settings?.min_for_high_value ?? 80,
+        dispute_rate_warn_percent: settings?.dispute_rate_warn_percent ?? 5,
         currency_thresholds: settings?.currency_thresholds ?? {},
         require_business_verification: false,
     });
@@ -62,6 +63,19 @@ export default function TrustSettings({ auth, settings, currencies }) {
                                         className="mt-1 block w-48 rounded-md bg-gray-900 border-gray-700 text-white focus:border-brand-gold focus:ring-brand-gold"
                                     />
                                     {errors.min_for_high_value && <p className="mt-1 text-xs text-red-300">{errors.min_for_high_value}</p>}
+                                </div>
+                                <div>
+                                    <label htmlFor="dispute_rate_warn_percent" className="block text-sm font-medium text-gray-300">Dispute rate warning threshold (%)</label>
+                                    <input
+                                        id="dispute_rate_warn_percent"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={data.dispute_rate_warn_percent}
+                                        onChange={(e) => setData('dispute_rate_warn_percent', Number(e.target.value))}
+                                        className="mt-1 block w-48 rounded-md bg-gray-900 border-gray-700 text-white focus:border-brand-gold focus:ring-brand-gold"
+                                    />
+                                    {errors.dispute_rate_warn_percent && <p className="mt-1 text-xs text-red-300">{errors.dispute_rate_warn_percent}</p>}
                                 </div>
                                 <div>
                                     <div className="text-sm font-semibold text-gray-300">High-value thresholds by currency (cents)</div>

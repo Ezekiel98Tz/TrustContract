@@ -21,6 +21,7 @@ class AdminTrustSettingsTest extends TestCase
         $payload = [
             'min_for_contract' => 60,
             'min_for_high_value' => 90,
+            'dispute_rate_warn_percent' => 5,
             'currency_thresholds' => [
                 'USD' => 25000,
                 'EUR' => 25000,

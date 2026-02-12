@@ -314,9 +314,18 @@ class ContractController extends Controller
                     return response()->json(['message' => 'Increase profile completeness to sign high-value contracts', 'required_percent' => $minHigh], 422);
                 }
             }
+                $settings = $this->getSettings();
+                if ($settings && ($settings->require_business_verification ?? false)) {
+                    $business = \App\Models\Business::where('user_id', $user->id)->first();
+                    if ($business && $business->verification_status !== 'verified') {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Business verification required to sign high-value contracts'], 403);
+                    }
+                }
             $existingSignature = \App\Models\ContractSignature::where('contract_id', $contract->id)
                 ->where('user_id', $user->id)
                 ->first();
+
 
             $now = now();
             // Set acceptance BEFORE recording signature

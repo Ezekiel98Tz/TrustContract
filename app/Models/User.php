@@ -72,6 +72,7 @@ class User extends Authenticatable
             'state' => !!$this->state,
             'postal_code' => !!$this->postal_code,
             'date_of_birth' => !!$this->date_of_birth,
+            'verification' => ($this->verification_status === 'verified'),
         ];
         $total = count($fields);
         $completed = array_sum(array_map(fn($v) => $v ? 1 : 0, $fields));
@@ -81,6 +82,25 @@ class User extends Authenticatable
     }
 
     // Relationships
+    public function business()
+    {
+        return $this->hasOne(\App\Models\Business::class, 'user_id');
+    }
+
+    public function overallCompletionPercent(): int
+    {
+        $p = $this->profileCompletion()['percent'] ?? 0;
+        $b = null;
+        try {
+            if ($this->business) {
+                $b = $this->business->completion()['percent'] ?? null;
+            }
+        } catch (\Throwable $e) {}
+        if ($b === null) {
+            return (int) $p;
+        }
+        return (int) round(($p + $b) / 2);
+    }
     public function contractsAsBuyer()
     {
         return $this->hasMany(\App\Models\Contract::class, 'buyer_id');
